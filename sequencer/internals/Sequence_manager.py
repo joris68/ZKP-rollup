@@ -66,9 +66,19 @@ class Sequence__Mananger:
             #inserting test users
             with open("standard_funded_accounts.json", "r") as file:
                 users_data = json.load(file)
-                users_data.map
-                users_collection.insert_many(users_data)
-                logger.info("Inserted users into the database.")
+            user_dicts = [
+                UsersCollection(
+                        address=user["address"],
+                        balance=user["balance"],
+                        latestNonce = 0,
+                        transactions = []
+
+                    ).dict()
+                    for user in users_data
+                ]
+        
+            users_collection.insert_many(user_dicts)
+            logger.info("Inserted users into the database.")
         except Exception as e:
             logger.info(e)
             sys.exit(1)
@@ -98,6 +108,7 @@ class Sequence__Mananger:
         badges_pointer = CurrentBadge(currBadgeID = geneisis_badge_id)
         try:
             badges_pointer_col.insert_one(badges_pointer.dict())
+            logger.info("Inserted the genesis pointer")
         except Exception as e:
             logger.error(f"Error inserting genesis badge: {e}")
             sys.exit(1)
