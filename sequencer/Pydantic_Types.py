@@ -48,7 +48,7 @@ class Transaction(BaseModel):
     amount : float
     status : TransactionStatus
     badgeId :  str
-    
+
     class Config:
         use_enum_values = True
 
@@ -70,8 +70,8 @@ class TransactionBadge(BaseModel):
     status : BadgeStatus
     executionCause: Optional[BadgeExecutionCause]
     transactions : list[str]
-    nextBadge : Optional["TransactionBadge"]
-    prevBadge : Optional["TransactionBadge"]
+    nextBadge : str
+    prevBadge : str
 
     class Config:
         use_enum_values = True
