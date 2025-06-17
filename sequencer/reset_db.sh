@@ -1,0 +1,1 @@
+mongosh -f reset_mongo.js

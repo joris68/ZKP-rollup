@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:4.4
+    container_name: mongodb_rollup
+    environment:
+      MONGO_INITDB_DATABASE: rollupdb
+    ports:
+      - "27017:27017" # Default MongoDB port
+    volumes:
+      - mongodb_data:/data/db
+
+volumes:
+  mongodb_data:
