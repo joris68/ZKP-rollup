@@ -1,0 +1,4 @@
+# Ignore Rust/Cargo build artifacts
+/target/
+/**/target/
+/lib/forge-std/
