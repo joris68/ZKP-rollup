@@ -1,5 +1,6 @@
 ## zk-Rollup
 
+```text
 zk-Rollup/
 ├── anvil                           // Local Ethereum simulation and state management for testing  
 │   
