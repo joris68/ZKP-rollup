@@ -7,13 +7,16 @@ class SubmissionResponse(BaseModel):
     submissionId : Optional[str]
     valid : Optional[bool]
 
-class TransactionRequest(BaseModel):
+class TransactionBody(BaseModel):
     sender : str
     receiver : str
     nonce : int
-    timestamp : int
-    signature: str
     amount : float
+
+class TransactionRequest(BaseModel):
+    signature: str
+    body : TransactionBody
+
 
 class TransactionStatus(Enum):
     SUBMITTED = "submitted"

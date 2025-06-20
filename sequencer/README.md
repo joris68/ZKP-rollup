@@ -17,3 +17,9 @@ To keep the sequencer responsive we will have a background task execute the batc
 after a given time interval with asyncio.create_task() when booting up the server
 
 # Data Model
+
+    We will use a
+
+# Transaction
+
+    A transaction in ethereum has the follwing format: we have a transaction body consisiting of:
