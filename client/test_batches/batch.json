@@ -1,0 +1,167 @@
+{
+  "old_root": "e9d8e3e9c99d14582b03229b4414a5600faa9ba9f9103017dc7c2048efc0d6c4",
+  "tx_count": 4,
+  "txs": [
+    {
+      "sender_addr": "e205c774418c1548169acd9b3c3d4757b09c1848291f4abb9c239e32418a7fb9",
+      "sender_balance": 587,
+      "sender_nonce": 0,
+      "sender_proof": [
+        {
+          "dir": 1,
+          "proof": "9928b6505759e087dbba6394bfa824c223b51270593f7d85a5fb389added88f4"
+        },
+        {
+          "dir": 0,
+          "proof": "7b8c42bcb1e2c33b3b2193ac905b9138e045dedc77706e0c2f750d746a75b88d"
+        },
+        {
+          "dir": 0,
+          "proof": "d062fa7d49d00d7776aabc2f6e85c87d0b0299b36f3a27f0a8803c6a3b994d29"
+        }
+      ],
+      "receiver_addr": "63badb60ae76c5f3d855130ebbfb53fc0bb731fe893daaf8311b4833cf071b38",
+      "amount": 282,
+      "tx_nonce": 0,
+      "signature": "5c1eb30235c6d3461c85921b325fff277441f51d08c5b96c2ff16540e65f2b66d3aed32f6dac7b81f48ad08b6a38178742d1c7d71c0e75f84cf24fd9aa0a2102",
+      "pubkey": "e205c774418c1548169acd9b3c3d4757b09c1848291f4abb9c239e32418a7fb9",
+      "recv_balance": 866,
+      "recv_nonce": 0,
+      "recv_proof": [
+        {
+          "dir": 0,
+          "proof": "d1482181264ba3852d3885565cd2054a51ca84806260cf46582662d50aee26dc"
+        },
+        {
+          "dir": 0,
+          "proof": "7b8c42bcb1e2c33b3b2193ac905b9138e045dedc77706e0c2f750d746a75b88d"
+        },
+        {
+          "dir": 0,
+          "proof": "d062fa7d49d00d7776aabc2f6e85c87d0b0299b36f3a27f0a8803c6a3b994d29"
+        }
+      ]
+    },
+    {
+      "sender_addr": "69683f3f255c853a4d457af72b5da1ccad0643e964198074b2699ce75bc8cde4",
+      "sender_balance": 411,
+      "sender_nonce": 0,
+      "sender_proof": [
+        {
+          "dir": 1,
+          "proof": "8e8ae6031082c8a488020212c76f5f8969c8e032803d8a0e4a42e8057b95499e"
+        },
+        {
+          "dir": 1,
+          "proof": "b240858ad6797df47fd018722177de8081fb582a7ad1cbd5975cd8d59649cfe1"
+        },
+        {
+          "dir": 0,
+          "proof": "d062fa7d49d00d7776aabc2f6e85c87d0b0299b36f3a27f0a8803c6a3b994d29"
+        }
+      ],
+      "receiver_addr": "e205c774418c1548169acd9b3c3d4757b09c1848291f4abb9c239e32418a7fb9",
+      "amount": 72,
+      "tx_nonce": 0,
+      "signature": "6e7c5578120333270e7e6940487e858146f87065282e7046a56b2c5e91353ec9c1570b55bb3b0bfa0644554d25ccd988dab8e237e2c4935fedc529bc02f9180a",
+      "pubkey": "69683f3f255c853a4d457af72b5da1ccad0643e964198074b2699ce75bc8cde4",
+      "recv_balance": 305,
+      "recv_nonce": 1,
+      "recv_proof": [
+        {
+          "dir": 1,
+          "proof": "de5cea6289a7c7a2e9bd68ba4ba8228525c3ba5d8ee951f0f869975bc82b45af"
+        },
+        {
+          "dir": 0,
+          "proof": "7b8c42bcb1e2c33b3b2193ac905b9138e045dedc77706e0c2f750d746a75b88d"
+        },
+        {
+          "dir": 0,
+          "proof": "d062fa7d49d00d7776aabc2f6e85c87d0b0299b36f3a27f0a8803c6a3b994d29"
+        }
+      ]
+    },
+    {
+      "sender_addr": "e205c774418c1548169acd9b3c3d4757b09c1848291f4abb9c239e32418a7fb9",
+      "sender_balance": 377,
+      "sender_nonce": 1,
+      "sender_proof": [
+        {
+          "dir": 1,
+          "proof": "de5cea6289a7c7a2e9bd68ba4ba8228525c3ba5d8ee951f0f869975bc82b45af"
+        },
+        {
+          "dir": 0,
+          "proof": "6666669fd349d4bb615cac89f9695c1ce237d376c89f16cebca248b6dfe07aea"
+        },
+        {
+          "dir": 0,
+          "proof": "d062fa7d49d00d7776aabc2f6e85c87d0b0299b36f3a27f0a8803c6a3b994d29"
+        }
+      ],
+      "receiver_addr": "408b03311562f959e33c158c886fec6ddd2bf73387958a79cb350c313f048917",
+      "amount": 280,
+      "tx_nonce": 1,
+      "signature": "cec4bff50e3415ca84313f34a4b6bf38f29fc347fcdb1ca14ae05199ef24c9a9262ea8f77ca66b8617809da4c527e3775de0c85991924fc1f9e0f121e9e05c04",
+      "pubkey": "e205c774418c1548169acd9b3c3d4757b09c1848291f4abb9c239e32418a7fb9",
+      "recv_balance": 452,
+      "recv_nonce": 0,
+      "recv_proof": [
+        {
+          "dir": 0,
+          "proof": "d0ade98fed276ada8be3a229a3beae9070e54cc8a66bd789abdfb4281ae34626"
+        },
+        {
+          "dir": 1,
+          "proof": "88c8527271b4b794eae69b8bb467284daf2e660d5e61b1c25a5acc6883bb5b22"
+        },
+        {
+          "dir": 1,
+          "proof": "30c9cf62f4736ba7ca1f64f1ae0a620954c1c68d58e32d55d11329e87877f3d4"
+        }
+      ]
+    },
+    {
+      "sender_addr": "e205c774418c1548169acd9b3c3d4757b09c1848291f4abb9c239e32418a7fb9",
+      "sender_balance": 97,
+      "sender_nonce": 2,
+      "sender_proof": [
+        {
+          "dir": 1,
+          "proof": "de5cea6289a7c7a2e9bd68ba4ba8228525c3ba5d8ee951f0f869975bc82b45af"
+        },
+        {
+          "dir": 0,
+          "proof": "6666669fd349d4bb615cac89f9695c1ce237d376c89f16cebca248b6dfe07aea"
+        },
+        {
+          "dir": 0,
+          "proof": "ad5bd8323d064d0b93508c6fd9b0df1dfdfa6d0e140e99d57451698d40f8cdb4"
+        }
+      ],
+      "receiver_addr": "978151422423431271dbcc57c2c117f8633ef1f45b36cbc9aeae5cb9f92819c8",
+      "amount": 55,
+      "tx_nonce": 2,
+      "signature": "f19066a8b7093de70d104926a42d6841719046266690d10b8492441f905a18d4428bc9cfbca4cdf76556528c20a275d592d49cf8e609803b415ac103a5b09904",
+      "pubkey": "e205c774418c1548169acd9b3c3d4757b09c1848291f4abb9c239e32418a7fb9",
+      "recv_balance": 576,
+      "recv_nonce": 0,
+      "recv_proof": [
+        {
+          "dir": 1,
+          "proof": "ba9d147c5e0b17de2e35cfad5b60b7bca9b7ea9afc00c18a281cb07c060ae08e"
+        },
+        {
+          "dir": 0,
+          "proof": "2f5c726ea05ab91525ff6f35d3b92d422e7d93e609558af10a394def1b00d129"
+        },
+        {
+          "dir": 1,
+          "proof": "457b7951aa27a2f7ec7b70fd2592977081b0e2cbe893abaf0bf0acb767a303b0"
+        }
+      ]
+    }
+  ],
+  "new_root": "37e43c384ba74dffbc6de585e492ec4e57bbc6750fc5ce21c51d9da6b0249d7d"
+}
