@@ -1,6 +1,11 @@
 [profile.default]
-src = "contracts"
+src = "solidity/contracts"
 out = "out"
 libs = ["lib"]
-
-# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+ffi = true
+remappings = [
+    "forge-std=solidity/lib/forge-std/src/",
+    "risc0=solidity/lib/risc0-ethereum/contracts/src/",
+    "openzeppelin=solidity/lib/openzeppelin-contracts/"
+]
+fs_permissions = [{ access = "read-write", path = "./"}]
