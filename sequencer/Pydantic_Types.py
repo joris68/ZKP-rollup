@@ -11,7 +11,7 @@ class TransactionBody(BaseModel):
     sender : str
     receiver : str
     nonce : int
-    amount : float
+    amount : int
 
 class TransactionRequest(BaseModel):
     signature: str
@@ -19,7 +19,6 @@ class TransactionRequest(BaseModel):
 
 
 class TransactionStatus(Enum):
-    SUBMITTED = "submitted"
     PENDING = "pending"
     INCLUDED = "included"
     FAILED = "failed"
@@ -36,7 +35,8 @@ class BadgeStatus(Enum):
     ONCHAIN = "onchain"
     SUBMITTED_FOR_VERIFICATION = "submitted for verification"
     WAITING_FOR_EXECUTION = "waiting for execution"
-
+    
+submissionId : str
 
 #collection
 class Transaction(BaseModel):
@@ -46,11 +46,10 @@ class Transaction(BaseModel):
     sender : str
     receiver : str
     nonce : int
-    timestamp : int
     signature: str
     amount : float
     status : TransactionStatus
-    badgeId :  str
+    badgeId :  Optional[str]
 
     class Config:
         use_enum_values = True
@@ -59,6 +58,8 @@ class Transaction(BaseModel):
 # collection
 class CurrentBadge(BaseModel):
     currBadgeID : str
+    currMerkleRoot : str
+   # verifiedBadge : str
 
 # collection
 class UsersCollection(BaseModel):
@@ -73,8 +74,8 @@ class TransactionBadge(BaseModel):
     status : BadgeStatus
     executionCause: Optional[BadgeExecutionCause]
     transactions : list[str]
-    nextBadge : str
-    prevBadge : str
+    prevBadge : Optional[str]
+    merkleRoot : str
 
     class Config:
         use_enum_values = True

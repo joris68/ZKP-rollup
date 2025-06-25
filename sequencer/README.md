@@ -23,3 +23,7 @@ after a given time interval with asyncio.create_task() when booting up the serve
 # Transaction
 
     A transaction in ethereum has the follwing format: we have a transaction body consisiting of:
+
+# Merkle tree
+
+https://github.com/matter-labs/zksync/blob/master/docs/protocol.md#data-format
