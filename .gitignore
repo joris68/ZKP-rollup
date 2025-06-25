@@ -2,3 +2,5 @@
 /target/
 /**/target/
 /lib/forge-std/
+
+venv
