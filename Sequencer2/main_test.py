@@ -81,12 +81,12 @@ async def test_mempool_insertion():
 
 async def test_badge_extraction():
     m = MemPool()
-    trans = await  m.get_badge_for_badge_size()
+    trans = await  m.get_transaction_for_badge()
     print(trans)
 
 async def test_badge_extraction_time():
     m = MemPool()
-    trans = await  m.get_badge_for_badge_size(last_timestamp= 1)
+    trans = await  m.get_transaction_for_badge(last_timestamp= 1)
     print(trans)
 
 

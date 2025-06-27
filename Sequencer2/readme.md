@@ -1,0 +1,49 @@
+# Sparse merkle Trees
+
+    leaf values: H(balance + nonce + pubkey hash)
+        H(x) = SHA256
+
+    merkle tree updates:
+        - 2 distict update operations
+
+# Rollop operation
+
+    We will build the "transferOp" rollup operation:
+        => transfer funds between existing rollup accounts
+
+
+    these operations are excuted within a block hence:
+        - transations should be ordered after receiving Time Ascending
+        - second ordered after nonce => sequential nonce model
+
+    these are the tree invariants for the update operation
+
+    def tree_invariants():
+        TransferOp.token < MAX_TOKENS
+
+        from_account.id == TransferOp.tx.from_account_id;
+        from_account.nonce == TransferOp.tx.nonce
+        from_account.nonce < MAX_NONCE
+        from_account.balance(TransferOp.tx.token) >= (amount + fee)
+        from_account.pubkey_hash == recover_signer_pubkey_hash(TransferOp.tx)
+        from_account.address == TransferOp.tx.from_address
+
+        to_account.address == TransferOp.tx.to_address
+
+    tree updates: 2 distinct leaf operations for the transaction
+
+    def tree_updates():
+        from_account.balance[TransferOp.tx.token] -= (amount + fee)
+        from_account.nonce += 1
+
+        to_acccount.balance[TransferOp.tx.token] += amount
+
+        fee_account.balance[TransferOp.tx.token] += fee
+
+Important links:
+
+- https://github.com/davebryson/sparse-merkle-tree/blob/master/README.md
+- https://github.com/matter-labs/zksync/blob/master/docs/protocol.md
+- https://lib.rs/crates/zksync_dal#:~:text=See%20zksync_state%20crate%20for%20more,context
+- https://github.com/matter-labs/zksync/blob/master/core/bin/server/src/main.rs
+  https://blog.quarkslab.com/zksync-transaction-workflow.html#:~:text=zkSync%20Era%20is%20designed%20as,H%28Slot%20number%2C%20Account
