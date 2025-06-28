@@ -1,5 +1,5 @@
 
-from Pydantic_Types import Transaction
+from Types import Transaction
 import os
 import logging
 from nacl.signing import VerifyKey

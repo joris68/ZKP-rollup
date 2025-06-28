@@ -9,6 +9,12 @@ class BadgeExecutionCause(Enum):
     FILLEDUP = "filledup"
 
 
+class BadgeStatus(Enum):
+    SEND_TO_VERIFY = "send_to_verify"
+    VERIFIED = "verified"
+    FAILED = "failed"
+
+
 class TransactionStatus(Enum):
     PENDING = "pending"
     INCLUDED = "included"
@@ -34,18 +40,6 @@ class Transaction(BaseModel):
         use_enum_values = True
 
 
-#collection
-class TransactionBadge(BaseModel):
-    badgeId : str
-    status : Optional[BadgeExecutionCause]
-    executionCause: Optional[BadgeExecutionCause]
-    transactions : list[str]
-    prevBadge : str
-
-    class Config:
-        use_enum_values = True
-
-
 class AccountUpdates(BaseModel):
     balance_before : int
     balance_after : int
@@ -61,3 +55,24 @@ class AccountsCollection(BaseModel):
     balance : int
     nonce: int
     account_updates : list[AccountUpdates]
+
+
+#collection
+class TransactionBadge(BaseModel):
+    badgeId : str
+    status : BadgeStatus
+    blockhash : str
+    state_root : str
+    blocknumber : int
+    timestamp : int
+    executionCause: Optional[BadgeExecutionCause]
+    transactions : list[str]
+    prevBadge : Optional[str]
+
+    class Config:
+        use_enum_values = True
+
+# collection
+class CurrentBadge(BaseModel):
+    currBadgeID : str
+

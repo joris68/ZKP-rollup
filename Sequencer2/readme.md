@@ -40,6 +40,22 @@
 
         fee_account.balance[TransferOp.tx.token] += fee
 
+Rollup operation is the difference between a
+
+The: transaction schema:
+
+    {
+        "from": "0x1f04204dba8e9e8bf90f5889fe4bdc0f37265dbb",
+        "to": "0x05e3066450dfcd4ee9ca4f2039d58883631f0460",
+        "amount": "12340000000000",
+        "fee": "56700000000",
+        "nonce": 784793056,
+        "signature": {
+            "pubKey": "0e1390d3e86881117979db2b37e40eaf46b6f8f38d2509ff3ecfaf229c717b9d",
+            "signature": "817c866e71a0b3e6d412ac56524557d368c11332db93554693787e89c9813310adeda68314fc833a4f73323eca00e2cc774e78db88921dc230db7dae691fe500"
+        }
+    }
+
 Important links:
 
 - https://github.com/davebryson/sparse-merkle-tree/blob/master/README.md
