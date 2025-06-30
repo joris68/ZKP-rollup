@@ -11,7 +11,7 @@ from utils import generate_random_id
 import os
 import hashlib
 import asyncio
-from create_test_transactions import create_transaction
+from create_test_transactions import create_transaction_to_submit
 
 
 
@@ -170,10 +170,13 @@ class BadgeController:
             await asyncio.sleep(10)
     
     async def create_transaction_flow(self):
-
         while True:
-            trans =  await create_transaction()
-            await self.mempool.insert_into_queue(trans, "1")
+            try:
+                trans = await create_transaction_to_submit() 
+                await self.mempool.insert_into_queue(trans, "1")
+                logger.info("Inserted transaction into mempool")
+            except Exception as e:
+                logger.error(f"Error in create_transaction_flow: {e}")
             await asyncio.sleep(1)
             
 

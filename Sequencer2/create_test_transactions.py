@@ -54,7 +54,7 @@ def create_transaction(sender : dict , receiver: dict, sender_idx : int) -> dict
             "receiver" : receiver["pub_key"],
             "amount" : AMOUNT,
             "nonce": NONCES[sender_idx],
-            "fee" : 0.5
+            "fee" : 1
         }
 
         sk = SigningKey(bytes.fromhex(sender['priv_key']))
@@ -69,7 +69,7 @@ def create_transaction(sender : dict , receiver: dict, sender_idx : int) -> dict
             }
         }
 
-async def create_transaction() -> Transaction:
+async def create_transaction_to_submit() -> Transaction:
         a, b = choose_random_transaction_pair(state_data["accounts"])
         sender = state_data["accounts"][a]
         receiver = state_data["accounts"][b]
