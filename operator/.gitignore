@@ -1,11 +1,7 @@
-# Ignore Rust/Cargo build artifacts
-/target/
-/**/target/
-/lib/forge-std/
-
 #python
 venv
 __pycache__/
+__pycache__
 *.py[cod]
 *.so
 *.egg

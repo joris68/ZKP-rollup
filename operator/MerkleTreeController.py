@@ -23,17 +23,17 @@ class MerkleTreeController:
         invariants_succeded = await self._check_tree_invariants_for_update(transaction=transaction)
         if not invariants_succeded:
             logger.info(f"in badge : {badge_id} and transaction: {transaction.transactionId} did not pass the invariants")
-            return
+            logger.error("invariants problem: tree invariants failed")
+            raise Exception("Tree invariants failed")
         
 
         try:
-            sender = transaction.sender
-            new_sender_leaf_data = self.update_sender_leaf_on_disk_return_bytes()
-            self.sparse_merkle_tree.update(sender, new_sender_leaf_data)
-            receiver = transaction.receiver
-            new_receiver_leaf = self.update_receiver_bytes_on_disk_return_bytes()
-            self.sparse_merkle_tree.update(receiver, new_receiver_leaf)
+            new_sender_leaf_data = await self.update_sender_leaf_return_bytes(badge_id=badge_id, transaction=transaction)
+            self.sparse_merkle_tree.update(bytes.fromhex(transaction.sender), new_sender_leaf_data)
+            new_receiver_leaf = await self.update_receiver_bytes_return_bytes(badge_id=badge_id, transaction=transaction)
+            self.sparse_merkle_tree.update(bytes.fromhex(transaction.receiver), new_receiver_leaf)
         except Exception as e:
+            logger.error(f"Error when updating leaf data : {e}")
             raise e
 
 
@@ -41,7 +41,7 @@ class MerkleTreeController:
         return self.sparse_merkle_tree.root_as_hex()
 
     
-    async def update_sender_leaf_on_disk_return_bytes(self, badge_id : str, transaction : Transaction) -> bytes:
+    async def update_sender_leaf_return_bytes(self, badge_id : str, transaction : Transaction) -> bytes:
         async with await self.mongo_client.start_session(causal_consistency=True) as session:
                 try:
                     logger.info(f"updating sender leaf data for change log")
@@ -57,7 +57,7 @@ class MerkleTreeController:
                             update_index = acc
 
                     if update_index is not None:
-                        new_balance = prev_sender.account_updates[update_index] - (transaction.amount + transaction.fee)
+                        new_balance = prev_sender.account_updates[update_index] - transaction.amount # + transaction.fee)
                         new_nonce = prev_sender.account_updates[update_index]["nonce_after"] + 1
                         await users_col.update_one(
                                 {
@@ -85,9 +85,9 @@ class MerkleTreeController:
                             else :
                                 last_sub = prev_sender["account_updates"][len(account_updates) -1]
                                 balance_before = last_sub["balance_after"]
-                                nonce_before = last_sub["nocnce_after"]
+                                nonce_before = last_sub["nonce_after"]
                             
-                            new_balance = balance_before - (transaction.amount + transaction.fee)
+                            new_balance = balance_before - transaction.amount #+ transaction.fee)
                             new_nonce = nonce_before + 1
 
                             await users_col.update_one(
@@ -110,9 +110,10 @@ class MerkleTreeController:
                             return self.leaf_to_bytes(new_balance, new_nonce, account= transaction.sender)
                 except Exception as e:
                     logger.error(f"error in updating the chnagelog for transaction : {transaction.transactionId}")
-                    raise e
+                    logger.error(f"{e}")
+                    raise
     
-    async def update_receiver_bytes_on_disk_return_bytes(self, badge_id : str, transaction : Transaction) -> bytes:
+    async def update_receiver_bytes_return_bytes(self, badge_id : str, transaction : Transaction) -> bytes:
          """
             receiver nonces do not get updated
          """
@@ -184,7 +185,7 @@ class MerkleTreeController:
                             return self.leaf_to_bytes(new_balance, new_nonce, sender= transaction.receiver)
                 except Exception as e:
                     logger.error(f"error in updating the chnagelog for transaction : {transaction.transactionId}")
-                    raise e
+                    raise
 
 
     async def leaf_to_bytes(self, balance : int, nonce : int , account : str ) -> bytes:
@@ -199,20 +200,18 @@ class MerkleTreeController:
     async def _check_tree_invariants_for_update(self, transaction : Transaction) -> bool:
          async with await self.mongo_client.start_session(causal_consistency=True) as session:
                 try:
-                    logger.info(f"starting to insert the transaction into the queue ")
                     db = self.mongo_client[os.environ["DB_NAME"]]
                     users_col = db[os.environ["USERS"]]
                     account  = await users_col.find_one({"address" : transaction.sender}, session=session)
                     if account is None:
                         logger.error(f"account data could not be found when quering for it")
                         return False
-
                     account_object = AccountsCollection(**account)
-                    balance_sufficient = account_object.balance >= (transaction.amount + transaction.fee)
+                    balance_sufficient = account_object.balance >= transaction.amount #+ fee
                     nonce_correct = account_object.nonce == transaction.nonce
                     account_receiver  = await users_col.find_one({"address" : transaction.receiver}, session=session)
 
-                    endresult = (balance_sufficient and  nonce_correct and account_receiver is not None)
+                    endresult = (balance_sufficient and  nonce_correct and (account_receiver is not None))
                     logger.info(f"endresult of the tree invariants : {endresult}")
                     return endresult
 
@@ -239,7 +238,9 @@ class MerkleTreeController:
         logger.info(tree.root_as_hex())
         return tree
     
-    
+    """
+        The libary hashes the leaf data internally
+    """
     def hash_account_to_leaf_value(self, account_data) -> bytes:
         balance = account_data["balance"]
         nonce = account_data["nonce"]
@@ -250,5 +251,5 @@ class MerkleTreeController:
 
         hashes_pub = hashlib.sha256(bytes.fromhex(pub_key)).digest()
         msg = balance_bytes + nonce_bytes + hashes_pub
-        return hashlib.sha256(msg).digest()
+        return msg
         

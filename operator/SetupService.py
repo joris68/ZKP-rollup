@@ -51,7 +51,7 @@ class SetupService:
             genesis_badge = TransactionBadge(
                 badgeId=geneisis_badge_id,
                 status=BadgeStatus.VERIFIED,
-                blockhash="0x" + "0" * 64,
+                blockhash= "0" * 64,
                 state_root = state_json["initial_state_root"],
                 blocknumber=0,
                 timestamp= get_current_timestamp(),
