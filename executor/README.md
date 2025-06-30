@@ -1,7 +1,7 @@
 export ETH_WALLET_PRIVATE_KEY=ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
 
 
-RISC0_USE_DOCKER=1 cargo run build --release
+RISC0_USE_DOCKER=1 cargo build --release
 
 (NOTE: THIS CMD ONLY WORKS ON LINUX x86)
 
