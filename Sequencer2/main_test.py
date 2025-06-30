@@ -2,7 +2,10 @@
 import asyncio
 from Types import Transaction, TransactionStatus
 from MemPool import MemPool
-
+from SetupService import SetupService
+from BadgeController import BadgeController
+import logging
+from create_test_transactions import create_transaction
 
 async def test_mempool_insertion():
     m = MemPool()
@@ -81,15 +84,37 @@ async def test_mempool_insertion():
 
 async def test_badge_extraction():
     m = MemPool()
-    trans = await  m.get_badge_for_badge_size()
+    trans = await  m.get_transaction_for_badge()
     print(trans)
 
 async def test_badge_extraction_time():
     m = MemPool()
-    trans = await  m.get_badge_for_badge_size(last_timestamp= 1)
+    trans = await  m.get_transaction_for_badge(last_timestamp= 1)
     print(trans)
 
 
+# 1. Setup service
+#2. init BadgeController
+#3 . make test transactions json
+# test insertion and background task trigger
 
-if __name__ =="__main__":
-    asyncio.run(test_badge_extraction_time())
+
+logging.basicConfig(
+    level=logging.INFO,  # or logging.DEBUG for more detail
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler()]
+)
+
+logger = logging.getLogger(__name__)
+
+
+async def test_badge():
+    setup = SetupService()
+    await setup.on_start()
+    badge_controller = BadgeController()
+    transaction_task = asyncio.create_task(badge_controller.create_transaction_flow())
+    task = asyncio.create_task(badge_controller.badge_execution_task())
+    await asyncio.Event().wait() 
+
+if __name__ == "__main__":
+    asyncio.run(test_badge())
