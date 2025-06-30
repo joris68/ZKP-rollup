@@ -24,16 +24,16 @@ class MemPool:
 
     async def insert_into_queue(self, transaction : Transaction, submisson_id):
         
-        transaction_valid = self.validator.check_transaction_validity(transaction= transaction, submission_id=submisson_id)
+        transaction_valid = await self.validator.check_transaction_validity(transaction= transaction, submission_id=submisson_id)
 
         async with await self.mongo_client.start_session(causal_consistency=True) as session:
                 try:
                     logger.info(f"starting to insert the transaction into the queue ")
                     db = self.mongo_client[os.environ["DB_NAME"]]
                     if transaction_valid:
-                        transaction.status = TransactionStatus.PENDING
+                        transaction.status = TransactionStatus.PENDING.value
                     else:
-                        transaction.status = TransactionStatus.INVALID
+                        transaction.status = TransactionStatus.INVALID.value
                     transaction_dict = transaction.model_dump()
                     trans_col = db[os.environ["TRANSACTIONS"]]
                     await trans_col.insert_one(transaction_dict, session=session)

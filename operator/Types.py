@@ -3,6 +3,18 @@ from enum import Enum
 from typing import Optional
 
 
+class SignatureData(BaseModel):
+    pubKey: str
+    signature: str
+
+class TransactionRequest(BaseModel):
+    sender: str
+    receiver: str
+    amount: int
+    fee: int    
+    nonce: int
+    signature: SignatureData
+
 
 class BadgeExecutionCause(Enum):
     TIMEDOUT = "timedout"
@@ -30,11 +42,10 @@ class Transaction(BaseModel):
     sender : str
     receiver : str
     nonce : int
-    timestamp : int
     signature: str
     amount : float
     status : Optional[TransactionStatus]
-    badgeId :  str
+    badgeId :  Optional[str]
 
     class Config:
         use_enum_values = True

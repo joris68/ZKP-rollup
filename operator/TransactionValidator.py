@@ -4,6 +4,8 @@ import os
 import logging
 from nacl.signing import VerifyKey
 import hashlib
+import struct
+from utils import create_message_from_transaction_body
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +18,7 @@ class Transaction_Validator(object):
         sig_binary = bytes.fromhex(dig_signature)
         sender_address = transaction.sender
         vk = VerifyKey(bytes.fromhex(sender_address))
-        msg = self._create_message_from_transaction_body(transaction.body)
+        msg = create_message_from_transaction_body(transaction)
         try:
             vk.verify(msg,sig_binary)
             logger.info(f"signature of {submission_id} valid")
@@ -25,13 +27,5 @@ class Transaction_Validator(object):
             logger.info(f"Signature of {submission_id} not valid due to invalid signature")
             return False
 
-
-    def _create_message_from_transaction_body(self, body : Transaction) -> bytes:
-        sender_bytes = bytes.fromhex(body.sender)
-        receiver_bytes = bytes.fromhex(body.receiver)
-        nonce_bytes = body.nonce.to_bytes(8, 'little') 
-        amount_bytes = body.amount.to_bytes(8, 'little')
-        msg = sender_bytes + receiver_bytes + nonce_bytes + amount_bytes
-        return hashlib.sha256(msg).digest()
 
 

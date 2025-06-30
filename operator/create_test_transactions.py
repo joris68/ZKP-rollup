@@ -3,7 +3,7 @@ import json
 import numpy as np
 import hashlib
 from nacl.signing import SigningKey
-from Types import Transaction
+from Types import TransactionRequest
 
 """
     The: transaction schema:
@@ -43,8 +43,7 @@ def transaction_body_to_bytes(trans_body : dict) -> bytes:
         receiver_bytes = bytes.fromhex(trans_body["receiver"])
         nonce_bytes = trans_body["nonce"].to_bytes(8, 'little') 
         amount_bytes = trans_body["amount"].to_bytes(8, 'little')
-        fee_bytes = trans_body["fee"].to_bytes(8, 'little')
-        msg = sender_bytes + receiver_bytes + nonce_bytes + amount_bytes + fee_bytes
+        msg = sender_bytes + receiver_bytes + nonce_bytes + amount_bytes
         return hashlib.sha256(msg).digest()
        
 
@@ -69,11 +68,11 @@ def create_transaction(sender : dict , receiver: dict, sender_idx : int) -> dict
             }
         }
 
-async def create_transaction_to_submit() -> Transaction:
+async def create_transaction_to_submit() -> TransactionRequest:
         a, b = choose_random_transaction_pair(state_data["accounts"])
         sender = state_data["accounts"][a]
         receiver = state_data["accounts"][b]
         data = create_transaction(sender, receiver, a)
-        return Transaction(**data)
+        return TransactionRequest(**data)
         
         
