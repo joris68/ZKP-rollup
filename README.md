@@ -1,5 +1,15 @@
 ## zk-Rollup
 
+
+git submodule add https://github.com/OpenZeppelin/openzeppelin-contracts \
+  solidity/lib/openzeppelin-contracts
+
+git submodule add https://github.com/foundry-rs/forge-std \
+  solidity/lib/forge-std
+
+git submodule add https://github.com/risc0/risc0-ethereum \
+  solidity/lib/risc0-ethereum
+
 ```text
 zk-Rollup/
 ├── anvil                           // Local Ethereum simulation and state management for testing  
