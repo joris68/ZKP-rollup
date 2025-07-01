@@ -1,0 +1,40 @@
+{
+  "old_merkle_root": "0xac893f8e31cb0ba3d2365fb864a1a88db084a5ea0023b73d7f5355467df555aa",
+  "leaf_data": [
+    {
+      "pub_key": "f19967f9a95037329e7dba14f6561352c2d726555f6f93c697eac9e0c2296fa8",
+      "balance": 1000,
+      "nonce": 0
+    },
+    {
+      "pub_key": "0bda2f5dd27480bc0cde47acf20a231762d9b68d9571993322e3981fe86f279d",
+      "balance": 1000,
+      "nonce": 0
+    }
+  ],
+  "transactions": [
+    {
+      "from": "f19967f9a95037329e7dba14f6561352c2d726555f6f93c697eac9e0c2296fa8",
+      "to": "0bda2f5dd27480bc0cde47acf20a231762d9b68d9571993322e3981fe86f279d",
+      "nonce": 0,
+      "amount": 1
+    }
+  ],
+  "inclusion_proof": [
+    {
+      "sidenodes": [
+        "98a4c5c0cc58d0642a67d61671eff8d423234e33ccf27258904e57f4ea2cc1b2"
+      ],
+      "non_membership_leafdata": null,
+      "sibling_data": null
+    },
+    {
+      "sidenodes": [
+        "6ac463be868e56ad86ca224593d51d3ffcaa9d0cc7bf9357b47652efbff14e26"
+      ],
+      "non_membership_leafdata": null,
+      "sibling_data": null
+    }
+  ],
+  "badgeId": 1
+}

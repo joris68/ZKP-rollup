@@ -29,8 +29,10 @@ class MerkleTreeController:
 
         try:
             new_sender_leaf_data = await self.update_sender_leaf_return_bytes(badge_id=badge_id, transaction=transaction)
+            logger.info(type(new_sender_leaf_data))
             self.sparse_merkle_tree.update(bytes.fromhex(transaction.sender), new_sender_leaf_data)
             new_receiver_leaf = await self.update_receiver_bytes_return_bytes(badge_id=badge_id, transaction=transaction)
+            logger.info(type(new_receiver_leaf))
             self.sparse_merkle_tree.update(bytes.fromhex(transaction.receiver), new_receiver_leaf)
         except Exception as e:
             logger.error(f"Error when updating leaf data : {e}")
@@ -75,7 +77,8 @@ class MerkleTreeController:
                                 },
                                 session=session
                             )
-                        return self.leaf_to_bytes(new_balance, new_nonce, account=transaction.sender)
+                        new_leaf_bytes =  await self.leaf_to_bytes(new_balance, new_nonce, account=transaction.sender)
+                        return new_leaf_bytes
                     else:
                             balance_before = None
                             nonce_before = None
@@ -106,12 +109,12 @@ class MerkleTreeController:
                                 },
                                 session=session
                             )
-
-                            return self.leaf_to_bytes(new_balance, new_nonce, account= transaction.sender)
+                            new_leaf_bytes = await self.leaf_to_bytes(new_balance, new_nonce, account= transaction.sender)
+                            return new_leaf_bytes
                 except Exception as e:
                     logger.error(f"error in updating the chnagelog for transaction : {transaction.transactionId}")
                     logger.error(f"{e}")
-                    raise
+                    raise e
     
     async def update_receiver_bytes_return_bytes(self, badge_id : str, transaction : Transaction) -> bytes:
          """
@@ -150,7 +153,8 @@ class MerkleTreeController:
                                 },
                                 session=session
                             )
-                        return self.leaf_to_bytes(new_balance, new_nonce, sender=transaction.receiver)
+                        new_leaf_bytes = await self.leaf_to_bytes(new_balance, new_nonce, account=transaction.receiver)
+                        return new_leaf_bytes
                     else:
                             balance_before = None
                             nonce_before = None
@@ -160,7 +164,7 @@ class MerkleTreeController:
                             else :
                                 last_sub = prev_receiver["account_updates"][len(account_updates) -1]
                                 balance_before = last_sub["balance_after"]
-                                nonce_before = last_sub["nocnce_after"]
+                                nonce_before = last_sub["nonce_after"]
                             
                             new_balance = balance_before + transaction.amount
                             new_nonce = nonce_before
@@ -182,18 +186,20 @@ class MerkleTreeController:
                                 session=session
                             )
 
-                            return self.leaf_to_bytes(new_balance, new_nonce, sender= transaction.receiver)
+                            new_leaf_bytes =  await self.leaf_to_bytes(new_balance, new_nonce, account= transaction.receiver)
+                            return new_leaf_bytes
                 except Exception as e:
                     logger.error(f"error in updating the chnagelog for transaction : {transaction.transactionId}")
-                    raise
+                    raise e
 
-
+    # TODO sure if that is correct? with hashing the key, because it gets hashed again?
     async def leaf_to_bytes(self, balance : int, nonce : int , account : str ) -> bytes:
 
         nonce_bytes = int(nonce).to_bytes(8, 'little') 
         balance_bytes = int(balance).to_bytes(8, 'little')
         hashes_pub = hashlib.sha256(bytes.fromhex(account)).digest()
-        return balance_bytes + nonce_bytes + hashes_pub
+        msg = balance_bytes + nonce_bytes + hashes_pub
+        return msg
         
 
     
@@ -240,6 +246,7 @@ class MerkleTreeController:
     
     """
         The libary hashes the leaf data internally
+        TODO : sure I need to hash the pubkey here?
     """
     def hash_account_to_leaf_value(self, account_data) -> bytes:
         balance = account_data["balance"]
