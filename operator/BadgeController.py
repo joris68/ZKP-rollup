@@ -99,11 +99,9 @@ class BadgeController:
             logger.info({
                 "new_state_root": new_merkle_root,
                 "old_state_root" : old_merkle_root,
-                "timestamp" : timestamp,
                 "blocknumber":  blocknumber +1,
-                "blockhash" : curr_block_hash,
-                "badgeId" : badge_id,
-                "transactions" : transactions_for_delta,
+                "transactions" : self.pydantic_to_json(transactions_for_delta),
+                "leaf_data_before" : "a"
             })
 
             transaction_ids = [t.transactionId for t in transactions_for_delta]
@@ -123,6 +121,17 @@ class BadgeController:
 
         except Exception as e:
             logger.error(f"{e}")
+    
+    def pydantic_to_json(self, transactions : list[Transaction]) -> list[dict]:
+        return [x.model_dump() for x in transactions]
+
+
+    async def get_leaf_data_(self) -> list[dict]:
+        db = self.mongo_client[os.environ["DB_NAME"]]
+        curr_col = db[os.environ["USERS"]]
+        users = await curr_col.find({})
+
+
 
 
 
@@ -214,6 +223,7 @@ class BadgeController:
         while True:
             try:
                 trans_req = await create_transaction_to_submit()
+                logger.info(trans_req)
                 submission_id = generate_random_id()
                 trans = self.enrich_transaction(transaction_request=trans_req, submission_id=submission_id)
                 await self.mempool.insert_into_queue(trans, submisson_id=submission_id)
