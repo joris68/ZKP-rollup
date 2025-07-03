@@ -142,11 +142,13 @@ def main(amount_transactions : int, amount_leafs : int, file_name : str):
     leaf_data = view_on_account_information(account_information=account_information)
     inclusion_proofs = get_merkle_proofs(sending_pairs=sending_pairs, tree=tree, account_information=account_information)
     badge_id = 1
+    new_merkle_root = tree.root_as_hex()
     badge = {
         "old_merkle_root": start_root,
         "leaf_data" : leaf_data,
         "transactions" : transactions,
         "inclusion_proofs" : inclusion_proofs,
+        "new_merkle_root" : new_merkle_root,
         "badge_id" : badge_id
     }
     with open(file_name, "w") as f:
