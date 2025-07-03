@@ -1,13 +1,13 @@
 {
-  "old_merkle_root": "0x6b24b6fc2245e87b24936c4df71b249c73baf0bfa4637783cee06f2cf9f32260",
+  "old_merkle_root": "0xaa7fdd239308cb937f4a95cfc43195df32b5cfc7d3f7ab4404dbc1c42974e527",
   "leaf_data": [
     {
-      "public_key": "0x04fe9299f75885598fd70b4450098910a6bb69a4000f4e49df71263ed23cdbfa05369a2700d0ee4afb83bba9b4464fdc3fdd9bb52f797fd025569fbe8030f6f65f",
+      "public_key": "0x047fbb37e25e7c81045941a5eb61627852ca640c03e3fba0c55010fe0e06da1014d37a5d0f4ef1ea02e06358f81d0601fcb09c4a70c5c90c87500f73ace692b78d",
       "balance": 1000,
       "nonce": 0
     },
     {
-      "public_key": "0x047dd407f318029e4809de21d83659c91d49cad9c41cbbdd695bc83e91fd8cd410d1376ed718b264a7f7dad48e52320d5a7323ec4388e82b0600f1a1844c9a0723",
+      "public_key": "0x04d8e5cd2143b6d37998bdb423fe8fa1af973b2fa7e28cc9d0d2da564916650c269af3b2ee1ebb0eebd85144f07ea355d7c1045d891639f03dbf67d7d73db85699",
       "balance": 1000,
       "nonce": 0
     }

@@ -37,8 +37,7 @@ def bytes_to_hex(data: bytes) -> str:
 def leaf_data_to_bytes( balance : int, nonce : int , pub_key : str ) -> bytes:
     nonce_bytes = int(nonce).to_bytes(8, 'little') 
     balance_bytes = int(balance).to_bytes(8, 'little')
-    pub_key_bytes = hex_to_bytes(pub_key)
-    msg = balance_bytes + nonce_bytes + pub_key_bytes
+    msg = balance_bytes + nonce_bytes
     return msg
 
 def apply_transaction(transaction : dict, account_information : list[dict], tree : SparseMerkleTree, participients : list[int] ):
@@ -156,7 +155,7 @@ def main(amount_transactions : int, amount_leafs : int, file_name : str):
 
 
 if __name__ == "__main__":
-    main(amount_transactions=30, amount_leafs=20, file_name="badge_30_20.json")
+    main(amount_transactions=0, amount_leafs=2, file_name="badge_0_1.json")
 
 
 

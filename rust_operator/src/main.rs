@@ -1,18 +1,14 @@
-use std::fs;
-use serde_json;
-use serde::Serialize;
-use rand::prelude::*;
-use sha2::{Sha256, Digest};
-use k256::ecdsa::{SigningKey, VerifyingKey, Signature, signature::Signer};
-use k256::EncodedPoint;
-use sparse_merkle_tree::{
-    blake2b::Blake2bHasher, 
-    default_store::DefaultStore, 
-    SparseMerkleTree, 
-    traits::Value, 
-    H256
-};
 use hex;
+use k256::ecdsa::{signature::Signer, Signature, SigningKey, VerifyingKey};
+use k256::EncodedPoint;
+use rand::prelude::*;
+use serde::Serialize;
+use serde_json;
+use sha2::{Digest, Sha256};
+use sparse_merkle_tree::{
+    blake2b::Blake2bHasher, default_store::DefaultStore, traits::Value, SparseMerkleTree, H256,
+};
+use std::fs;
 
 // JSON output structures
 #[derive(Serialize, Clone)]
@@ -75,22 +71,22 @@ impl Value for AccountData {
         if self.balance == 0 && self.nonce == 0 {
             return H256::zero();
         }
-        
+
         // Match Python's leaf_data_to_bytes format:
         // balance_bytes (8 bytes LE) + nonce_bytes (8 bytes LE)
         let mut data = [0u8; 16];
         data[0..8].copy_from_slice(&self.balance.to_le_bytes());
         data[8..16].copy_from_slice(&self.nonce.to_le_bytes());
-        
+
         let mut hasher = Sha256::new();
         hasher.update(&data);
         let hash = hasher.finalize();
-        
+
         let mut buf = [0u8; 32];
         buf.copy_from_slice(&hash);
         buf.into()
     }
-    
+
     fn zero() -> Self {
         Default::default()
     }
@@ -101,13 +97,13 @@ type SMT = SparseMerkleTree<Blake2bHasher, AccountData, DefaultStore<AccountData
 fn create_account_information(num: usize) -> Vec<AccountInfo> {
     let mut accounts = Vec::new();
     let mut rng = thread_rng();
-    
+
     for _ in 0..num {
         let private_key = SigningKey::random(&mut rng);
         let verifying_key = VerifyingKey::from(&private_key);
         let encoded_point = verifying_key.to_encoded_point(false); // Uncompressed
         let public_key = format!("0x{}", hex::encode(encoded_point.as_bytes()));
-        
+
         accounts.push(AccountInfo {
             private_key,
             public_key,
@@ -115,7 +111,7 @@ fn create_account_information(num: usize) -> Vec<AccountInfo> {
             nonce: 0,
         });
     }
-    
+
     accounts
 }
 
@@ -135,15 +131,16 @@ fn initialize_merkle_tree(account_information: &[AccountInfo], tree: &mut SMT) -
         // Use first 32 bytes of public key as tree key
         key_array.copy_from_slice(&key_bytes[1..33]); // Skip first byte (0x04 for uncompressed)
         let key = H256::from(key_array);
-        
+
         let account_data = AccountData {
             balance: acc.balance,
             nonce: acc.nonce,
         };
-        
-        tree.update(key, account_data).expect("Failed to update tree");
+
+        tree.update(key, account_data)
+            .expect("Failed to update tree");
     }
-    
+
     format!("0x{}", hex::encode(tree.root().as_slice()))
 }
 
@@ -151,11 +148,11 @@ fn main() {
     let amount_transactions = 1;
     let amount_leafs = 2;
     let file_name = "badge_1_2_rust.json";
-    
+
     let mut tree = SMT::default();
     let account_information = create_account_information(amount_leafs);
     let start_root = initialize_merkle_tree(&account_information, &mut tree);
-    
+
     let transactions = vec![]; // Skip transactions for now, focus on root building
     let leaf_data: Vec<LeafData> = account_information
         .iter()
@@ -165,13 +162,13 @@ fn main() {
             nonce: acc.nonce,
         })
         .collect();
-    
+
     let inclusion_proofs = vec![InclusionProof {
         sidenodes: vec![],
         non_membership_leafdata: None,
         sibling_data: None,
     }];
-    
+
     let badge = Batch {
         old_merkle_root: start_root.clone(),
         leaf_data,
@@ -179,10 +176,10 @@ fn main() {
         inclusion_proofs,
         badge_id: 1,
     };
-    
+
     let json_output = serde_json::to_string_pretty(&badge).unwrap();
     fs::write(file_name, json_output).expect("Failed to write file");
-    
+
     println!("Generated batch file: {}", file_name);
     println!("Initial root: {}", start_root);
 }

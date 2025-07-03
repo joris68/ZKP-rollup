@@ -1,0 +1,11 @@
+[package]
+name = "chainOperator"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ethers = { version = "2.0", features = ["ws"] }
+
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+eyre = "0.6"

@@ -1,0 +1,19 @@
+{
+  "old_merkle_root": "0x5d660d5041194fdf26dd8870866a2aa97ffb7871d0601f14d84b5045aa3edfaa",
+  "leaf_data": [
+    {
+      "public_key": "0x013ef84991e3fdb6c0683fdefcf27d8f2389ad373cfda1576de170ac2355367b6387627e62bf0aab8e35fac98e16a7a656c1b89a2526718038fb91e5c1c615e6",
+      "balance": 1000,
+      "nonce": 0
+    },
+    {
+      "public_key": "0x727131bbb0b6c45404a6947ea0802af3e5dba7fe7ee57e8ef22ffafbc077f221dd5c6881a327597de3948d6a5d95120184b135f08d61ef2955768556421cb7b6",
+      "balance": 1000,
+      "nonce": 0
+    }
+  ],
+  "transactions": [],
+  "inclusion_proofs": [],
+  "new_merkle_root": "0x5d660d5041194fdf26dd8870866a2aa97ffb7871d0601f14d84b5045aa3edfaa",
+  "badge_id": 1
+}
