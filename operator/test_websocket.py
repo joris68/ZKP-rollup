@@ -3,13 +3,26 @@ import sys
 import logging
 import json
 
-CONTRACTS_JSON = "contract_details.json"
+CONTRACTS_JSON = "../broadcast/Deploy.s.sol/31337/run-latest.json"
 NODE_ADDRESS = 'ws://127.0.0.1:8545'
 
-def load_contract_information() -> dict:
+def load_contract_address_and_name() -> dict:
     with open('YourContract.json') as f:
         contract_specs = json.load(f)['abi']
     return contract_specs
+
+def load_abi():
+    with open('HelloWorld.json') as f:
+        abi = json.load(f)['abi']
+    return abi
+
+
+def _init_contract():
+    info = load_contract_address_and_name()
+    contract_address = info["address"]
+    contract_name = info["name"]
+    contract_abi = load_abi()
+    return w3.eth.contract(address=contract_address, abi=contract_abi)
 
 class ChainListener:
 
@@ -30,25 +43,13 @@ class ChainCaller:
         self.contract = self._init_contract()
     
     def _init_contract(self):
-        info = load_contract_information()
+        info = load_contract_address_and_name()
         contract_address = info["address"]
-        contract_abi = info["abi"]
+        contract_name = info["name"]
+        contract_abi = load_abi()
         return w3.eth.contract(address=contract_address, abi=contract_abi)
 
 
-    
-
-        
-
-
-        
-
-# Contract details
-contract_address = '0xYourContractAddressHere'
-with open('YourContract.json') as f:
-    contract_abi = json.load(f)['abi']  # From compiled artifact
-
-contract = w3.eth.contract(address=contract_address, abi=contract_abi)
 
 # Set up the event to watch
 event_filter = contract.events.ValueChanged.create_filter(fromBlock='latest')
