@@ -9,10 +9,9 @@ from Types import TransactionRequest
     The: transaction schema:
 
     {
-        "sender": "0x1f04204dba8e9e8bf90f5889fe4bdc0f37265dbb",
-        "receiver": "0x05e3066450dfcd4ee9ca4f2039d58883631f0460",
+        "from": "0x1f04204dba8e9e8bf90f5889fe4bdc0f37265dbb",
+        "to": "0x05e3066450dfcd4ee9ca4f2039d58883631f0460",
         "amount": "12340000000000",
-        "fee": "56700000000",
         "nonce": 784793056,
         "signature": {
             "pubKey": "0e1390d3e86881117979db2b37e40eaf46b6f8f38d2509ff3ecfaf229c717b9d",
