@@ -1,0 +1,12 @@
+[package]
+name = "sig_k256"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = ["std"]
+std = ["k256/std"]
+
+[dependencies]
+k256 = { version = "0.13", default-features = false, features = ["ecdsa"] }
+sha2 = { version = "0.10", default-features = false }
