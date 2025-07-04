@@ -22,6 +22,17 @@ contract Rollup {
         verifier = _verifier;
     }
 
+    event Deposit (address layer2Address, uint256 amount);
+
+    /// directly from the zksync protocol
+    /// @notice Deposit ETH to Layer 2 - transfer ether from user into contract, validate it, register deposit
+    /// @param layer2Address The receiver Layer 2 address
+    function depositETH(address layer2Address) external payable {
+        require(layer2Address != address(0), "P");
+        require(msg.value > 0, "M");
+        emit Deposit(layer2Address , msg.value);
+    }
+
     /// @notice Submit a new rollup batch
     /// @param newRoot The new Merkle root after applying the batch
     /// @param txData  ABI-encoded transactions of the batch
