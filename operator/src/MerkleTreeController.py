@@ -1,9 +1,9 @@
 
-from Types import Transaction, AccountsCollection
+from operator.src.Types import Transaction, AccountsCollection
 import json
 import hashlib
 from smt.tree import SparseMerkleTree
-from  AsyncMongoClient import get_mongo_client
+from  operator.src.AsyncMongoClient import get_mongo_client
 import os
 import logging
 

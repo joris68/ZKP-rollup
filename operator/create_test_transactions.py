@@ -3,7 +3,7 @@ import json
 import numpy as np
 import hashlib
 from nacl.signing import SigningKey
-from Types import TransactionRequest
+from operator.src.Types import TransactionRequest
 
 """
     The: transaction schema:
