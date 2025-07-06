@@ -40,6 +40,26 @@ class MemPool:
                     logger.info("transaction successfully inserted into the queue")
                 except Exception as e:
                     logger.error(f"Failed to process transaction: {e}")
+    
+    async def insert_deposit_transaction(self, address : str, amount : int , current_time_stamp : int):
+        
+        async with await self.mongo_client.start_session(causal_consistency=True) as session:
+            try:
+                deposit_transaction = Transaction(
+                    sender = address,
+                    amount = amount,
+                    receivedAt = current_time_stamp
+                )
+                db = self.mongo_client[os.environ["DB_NAME"]]
+                trans_col = db[os.environ["TRANSACTIONS"]]
+                users_col = db[os.environ["USERS"]]
+                users_col.insert_one({"pub_key" : address, "balance": amount, "nonce" : 0})
+                logger.info("new account leaf inserted due to deposit transaction")
+                trans_col.insert_one(deposit_transaction.model_dump())
+                logger.info("deposit transaction successfully included into the mempool queue")
+            except Exception as e:
+                logger.error(f"Deposit event could not be processed : {e}")
+        
             
 
     async def get_transaction_for_badge(self, last_timestamp = None) -> list[Transaction]:

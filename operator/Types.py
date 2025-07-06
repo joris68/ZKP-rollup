@@ -37,12 +37,12 @@ class TransactionStatus(Enum):
 #collection
 class Transaction(BaseModel):
     receivedAt : int
-    submissionId : str
-    transactionId : str
+    submissionId : Optional[str]
+    transactionId : Optional[str]
     sender : str
-    receiver : str
-    nonce : int
-    signature: str
+    receiver : Optional[str]
+    nonce : Optional[int]
+    signature: Optional[str]
     amount : float
     status : Optional[TransactionStatus]
     badgeId :  Optional[str]

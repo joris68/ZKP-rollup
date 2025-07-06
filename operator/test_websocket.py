@@ -7,6 +7,7 @@ import logging
 from web3 import AsyncWeb3, AsyncHTTPProvider
 from eth_abi.abi import decode
 from MemPool import MemPool
+from utils import get_current_timestamp
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,12 @@ class ChainListener:
     
     async def handle_deposit_entries(self, deposit_entries):
         for dep in deposit_entries:
-            pass
+            logger.info("handling deposit event")
+            deposit_args = dep['args']
+            curr_time_stamp = get_current_timestamp()
+            address = deposit_args["layer2adrress"]
+            amount = deposit_args["amount"]
+            await self.mempool.insert_deposit_transaction(address=address, amount=amount, current_time_stamp=curr_time_stamp)
 
     async def chain_loop(self):
         deposit_event = await self._init_deposit_event_filter()
@@ -63,23 +69,6 @@ class ChainListener:
             await asyncio.sleep(self.polling_interval)
 
 
-# async def subscribe_to_transfer_events():
-#     async with AsyncWeb3(WebSocketProvider(NODE_ADDRESS)) as w3:
-#         deposit_event_topic  = w3.keccak(text="Deposit(address,address,uint256)")
-#         filter_params = {
-#             "address": CONTRACT_ADDRESS,
-#             "topics": [deposit_event_topic],
-#         }
-#         subscription_id = await w3.eth.subscribe("events", filter_params)
-#         print(f"Subscribing to transfer events for WETH at {subscription_id}")
-
-#         async for payload in w3.socket.process_subscriptions():
-#             result = payload["result"]
-#             print(result)
-            
-
-
-
 if __name__ == "__main__":
-    listener = ChainListener(2)
+    listener = ChainListener(2, mempool=MemPool())
     asyncio.run(listener.chain_loop())
