@@ -1,14 +1,14 @@
-from operator.src.utils import get_current_timestamp
-from operator.src.MemPool import MemPool
-from operator.src.Types import BadgeExecutionCause, TransactionBadge, TransactionStatus, BadgeStatus, Transaction, TransactionRequest
-from operator.src.AsyncMongoClient import get_mongo_client
+from sequencer.src.utils import get_current_timestamp
+from sequencer.src.MemPool import MemPool
+from sequencer.src.Types import BadgeExecutionCause, TransactionBadge, TransactionStatus, BadgeStatus, Transaction, TransactionRequest, SubmissionResponse
+from sequencer.src.AsyncMongoClient import get_mongo_client
 import logging
-from operator.src.MerkleTreeController import MerkleTreeController
-from operator.src.utils import generate_random_id, create_message_from_transaction_body
+from sequencer.src.MerkleTreeController import MerkleTreeController
+from sequencer.src.utils import generate_random_id, create_message_from_transaction_body
 import os
 import hashlib
 import asyncio
-from create_test_transactions import create_transaction_to_submit
+
 
 
 logger = logging.getLogger(__name__)
@@ -125,16 +125,10 @@ class BadgeController:
     def pydantic_to_json(self, transactions : list[Transaction]) -> list[dict]:
         return [x.model_dump() for x in transactions]
 
-
     async def get_leaf_data_(self) -> list[dict]:
         db = self.mongo_client[os.environ["DB_NAME"]]
         curr_col = db[os.environ["USERS"]]
         users = await curr_col.find({})
-
-
-
-
-
 
     async def get_previous_block_information(self) -> tuple[str, int]:
         """
@@ -154,9 +148,6 @@ class BadgeController:
         except Exception as e:
             logger.error(f"failed to retriece previous block information : {e}")
 
-
-
-    
     async def create_block_hash(self, blocknumber: int, timestamp: int, transactions: list[Transaction], previous_block_hash: str) -> str:
         logger.info(f"prev block hash : {previous_block_hash}")
         try: 
@@ -207,30 +198,37 @@ class BadgeController:
             sender=transaction_request.sender,
             receiver=transaction_request.receiver,
             nonce=transaction_request.nonce,
-            signature=transaction_request.signature.signature,  # Extract the signature string
+            signature=transaction_request.signature.signature,
             amount=transaction_request.amount,
             status=TransactionStatus.PENDING,
             badgeId = None
         )
+
+    async def handel_transaction_submission(self, transaction_request : TransactionRequest) -> SubmissionResponse:
+        submission_id = generate_random_id()
+        trans = self.enrich_transaction(transaction_request=transaction_request, submission_id=submission_id)
+        await self.mempool.insert_into_queue(trans, submisson_id=submission_id)
+        logger.info("Inserted transaction into mempool")
+        
     
-    async def badge_execution_task(self):
-        logger.info("starting task")
-        while True:
-            await self.form_new_L2_block(BadgeExecutionCause.TIMEDOUT)
-            await asyncio.sleep(10)
+    # async def badge_execution_task(self):
+    #     logger.info("starting task")
+    #     while True:
+    #         await self.form_new_L2_block(BadgeExecutionCause.TIMEDOUT)
+    #         await asyncio.sleep(10)
     
-    async def create_transaction_flow(self):
-        while True:
-            try:
-                trans_req = await create_transaction_to_submit()
-                logger.info(trans_req)
-                submission_id = generate_random_id()
-                trans = self.enrich_transaction(transaction_request=trans_req, submission_id=submission_id)
-                await self.mempool.insert_into_queue(trans, submisson_id=submission_id)
-                logger.info("Inserted transaction into mempool")
-            except Exception as e:
-                logger.error(f"Error in create_transaction_flow: {e}")
-            await asyncio.sleep(1)
+    # async def create_transaction_flow(self):
+    #     while True:
+    #         try:
+    #             trans_req = await create_transaction_to_submit()
+    #             logger.info(trans_req)
+    #             submission_id = generate_random_id()
+    #             trans = self.enrich_transaction(transaction_request=trans_req, submission_id=submission_id)
+    #             await self.mempool.insert_into_queue(trans, submisson_id=submission_id)
+    #             logger.info("Inserted transaction into mempool")
+    #         except Exception as e:
+    #             logger.error(f"Error in create_transaction_flow: {e}")
+    #         await asyncio.sleep(1)
 
 
 

@@ -1,9 +1,9 @@
 
-from operator.src.Types import Transaction, AccountsCollection
+from sequencer.src.Types import Transaction, AccountsCollection
 import json
 import hashlib
 from smt.tree import SparseMerkleTree
-from  operator.src.AsyncMongoClient import get_mongo_client
+from  sequencer.src.AsyncMongoClient import get_mongo_client
 import os
 import logging
 

@@ -87,3 +87,9 @@ class TransactionBadge(BaseModel):
 class CurrentBadge(BaseModel):
     currBadgeID : str
 
+class SubmissionResponse(BaseModel):
+    submission_id : str
+    valid : bool
+
+
+
