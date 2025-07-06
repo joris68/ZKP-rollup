@@ -8,8 +8,7 @@ import json
 from dotenv import load_dotenv
 from typing import AsyncGenerator
 from contextlib import asynccontextmanager
-from Pydantic_Types import TransactionRequest, SubmissionResponse
-from internals.Sequence_manager import Sequence__Mananger
+from src.Types import TransactionRequest, SubmissionResponse
 
 load_dotenv()
 
