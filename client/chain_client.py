@@ -129,5 +129,5 @@ class StefanJorisRollUpUser(HttpUser):
 
 
 
-if __name__ == "__main__": 
-    make_deposit_call(address=ACCOUNT_ADDRESS)
+# if __name__ == "__main__": 
+#     make_deposit_call(address=ACCOUNT_ADDRESS)

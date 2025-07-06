@@ -1,11 +1,11 @@
 
-from Types import Transaction
+from operator.src.Types import Transaction
 import os
 import logging
 from nacl.signing import VerifyKey
 import hashlib
 import struct
-from utils import create_message_from_transaction_body
+from operator.src.utils import create_message_from_transaction_body
 
 logger = logging.getLogger(__name__)
 
