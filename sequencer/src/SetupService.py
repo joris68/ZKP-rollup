@@ -1,11 +1,11 @@
 
-from operator.src.AsyncMongoClient import get_mongo_client
+from sequencer.src.AsyncMongoClient import get_mongo_client
 import logging
 import os
-from operator.src.Types import AccountsCollection, TransactionBadge, BadgeStatus, CurrentBadge
+from sequencer.src.Types import AccountsCollection, TransactionBadge, BadgeStatus, CurrentBadge
 import sys
 import json
-from operator.src.utils import generate_random_id, get_current_timestamp
+from sequencer.src.utils import generate_random_id, get_current_timestamp
 
 
 logger = logging.getLogger(__name__)

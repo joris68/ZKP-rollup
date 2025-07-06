@@ -1,7 +1,7 @@
 import uuid
 import time
 import hashlib
-from operator.src.Types import Transaction
+from sequencer.src.Types import Transaction
 
 def generate_random_id() -> str:
     return str(uuid.uuid4())

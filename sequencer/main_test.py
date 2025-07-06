@@ -1,9 +1,9 @@
 
 import asyncio
-from operator.src.Types import Transaction, TransactionStatus
-from operator.src.MemPool import MemPool
-from operator.src.SetupService import SetupService
-from operator.src.BadgeController import BadgeController
+from sequencer.src.Types import Transaction, TransactionStatus
+from sequencer.src.MemPool import MemPool
+from sequencer.src.SetupService import SetupService
+from sequencer.src.BadgeController import BadgeController
 import logging
 from create_test_transactions import create_transaction
 

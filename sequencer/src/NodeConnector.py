@@ -6,8 +6,8 @@ import asyncio
 import logging
 from web3 import AsyncWeb3, AsyncHTTPProvider
 from eth_abi.abi import decode
-from operator.src.MemPool import MemPool
-from operator.src.utils import get_current_timestamp
+from sequencer.src.MemPool import MemPool
+from sequencer.src.utils import get_current_timestamp
 
 logger = logging.getLogger(__name__)
 
