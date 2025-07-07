@@ -1,15 +1,15 @@
-from sequencer.src.utils import get_current_timestamp
-from sequencer.src.MemPool import MemPool
-from sequencer.src.Types import BadgeExecutionCause, TransactionBadge, TransactionStatus, BadgeStatus, Transaction, TransactionRequest, SubmissionResponse
-from sequencer.src.AsyncMongoClient import get_mongo_client
+from src.utils import get_current_timestamp
+from src.MemPool import MemPool
+from src.Types import BadgeExecutionCause, TransactionBadge, TransactionStatus, BadgeStatus, Transaction, TransactionRequest, SubmissionResponse, SubmissionStatus, NonceResponse
+from src.AsyncMongoClient import get_mongo_client
 import logging
-from sequencer.src.MerkleTreeController import MerkleTreeController
-from sequencer.src.utils import generate_random_id, create_message_from_transaction_body
+from src.MerkleTreeController import MerkleTreeController
+from src.utils import generate_random_id
 import os
 import hashlib
 import asyncio
 
-
+BATCH_SIZE = 50
 
 logger = logging.getLogger(__name__)
 
@@ -21,12 +21,13 @@ logger = logging.getLogger(__name__)
 
 class BadgeController:
 
-    def __init__(self):
+    def __init__(self, queue):
+        self.queue = queue
         self.transaction_counter = 0
         self.last_timestamp = get_current_timestamp()
         self.mempool = MemPool()
         self.mongo_client = get_mongo_client()
-        self.tree_controller = MerkleTreeController()
+        self.tree_controller = MerkleTreeController(with_account_setup=False)
     
 
     async def _get_transaction_for_badge(self, badge_execution_cause : BadgeExecutionCause) -> list[Transaction]:
@@ -94,18 +95,7 @@ class BadgeController:
             timestamp = get_current_timestamp()
             curr_block_hash = await self.create_block_hash(blocknumber=blocknumber +1,
             timestamp=timestamp, transactions=badged_transaction, previous_block_hash=blockhash)
-            
-            #here send badge to ZK
-            logger.info({
-                "new_state_root": new_merkle_root,
-                "old_state_root" : old_merkle_root,
-                "blocknumber":  blocknumber +1,
-                "transactions" : self.pydantic_to_json(transactions_for_delta),
-                "leaf_data_before" : "a"
-            })
-
             transaction_ids = [t.transactionId for t in transactions_for_delta]
-
             l2_badge_new = TransactionBadge(
                 badgeId=badge_id,
                 status=BadgeStatus.SEND_TO_VERIFY,
@@ -118,19 +108,24 @@ class BadgeController:
                 prevBadge=prev_id
             )
             await self.insert_new_badge(badge=l2_badge_new, next_badge_id=badge_id)
+            logger.info({
+                "new_state_root": new_merkle_root,
+                "old_state_root" : old_merkle_root,
+                "blocknumber":  blocknumber + 1,
+                "transactions" : [x.model_dump() for x in transactions_for_delta],
+                "blockhash" : curr_block_hash
+            })
 
         except Exception as e:
             logger.error(f"{e}")
     
-    def pydantic_to_json(self, transactions : list[Transaction]) -> list[dict]:
-        return [x.model_dump() for x in transactions]
 
     async def get_leaf_data_(self) -> list[dict]:
         db = self.mongo_client[os.environ["DB_NAME"]]
         curr_col = db[os.environ["USERS"]]
         users = await curr_col.find({})
 
-    async def get_previous_block_information(self) -> tuple[str, int]:
+    async def get_previous_block_information(self) -> tuple[str, int, str]:
         """
             Gets prev blockhash and blocknumber to increment
         """
@@ -207,28 +202,50 @@ class BadgeController:
     async def handel_transaction_submission(self, transaction_request : TransactionRequest) -> SubmissionResponse:
         submission_id = generate_random_id()
         trans = self.enrich_transaction(transaction_request=transaction_request, submission_id=submission_id)
-        await self.mempool.insert_into_queue(trans, submisson_id=submission_id)
-        logger.info("Inserted transaction into mempool")
+        submission_response = await self.mempool.insert_into_queue(trans, submisson_id=submission_id)
+        self.transaction_counter += 1
+        if self.transaction_counter == BATCH_SIZE:
+            await self.queue.put({"cause" : BadgeExecutionCause.FILLEDUP})
+            self.transaction_counter = 0
+        return submission_response
         
+    async def batch_queue_consumer(self):
+        while True:
+            logger.info("putting new job into the queue")
+            item = await self.queue.get()
+            await self.form_new_L2_block(execution_cause=item["cause"])
+            self.queue.task_done()
     
-    # async def badge_execution_task(self):
-    #     logger.info("starting task")
-    #     while True:
-    #         await self.form_new_L2_block(BadgeExecutionCause.TIMEDOUT)
-    #         await asyncio.sleep(10)
+    async def batch_queue_producer(self):
+        await asyncio.sleep(5)
+        while True:
+            logger.info("putting new jon into the queue")
+            await self.queue.put({"cause" : BadgeExecutionCause.TIMEDOUT})
+            await asyncio.sleep(5)
     
-    # async def create_transaction_flow(self):
-    #     while True:
-    #         try:
-    #             trans_req = await create_transaction_to_submit()
-    #             logger.info(trans_req)
-    #             submission_id = generate_random_id()
-    #             trans = self.enrich_transaction(transaction_request=trans_req, submission_id=submission_id)
-    #             await self.mempool.insert_into_queue(trans, submisson_id=submission_id)
-    #             logger.info("Inserted transaction into mempool")
-    #         except Exception as e:
-    #             logger.error(f"Error in create_transaction_flow: {e}")
-    #         await asyncio.sleep(1)
+    async def get_nonce_for_account(self, account : str) -> int:
+        try:
+            db = self.mongo_client[os.environ["DB_NAME"]]
+            curr_col = db[os.environ["USERS"]]
+            doc = await curr_col.find_one({"address" : account})
+            return NonceResponse( nonce = doc["nonce"])
+        except Exception as e:
+            logger.error(f"Error when queriing for nonce: {e}")
+            raise e
+    
+    async def get_status_for_transaction(self, submission_id: str) -> str:
+        try:
+            db = self.mongo_client[os.environ["DB_NAME"]]
+            curr_col = db[os.environ["TRANSACTIONS"]]
+            doc = await curr_col.find_one({"submissionId" : submission_id})
+            return SubmissionStatus(submission_id= submission_id, status=doc["status"])
+        except Exception as e:
+            logger.error(f"Error when quering for status {e}")
+            raise e
+
+
+
+    
 
 
 

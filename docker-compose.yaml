@@ -7,7 +7,7 @@ services:
     environment:
       MONGO_INITDB_DATABASE: rollupdb
     ports:
-      - "27017:27017" # Default MongoDB port
+      - "27017:27017"
     volumes:
       - mongodb_data:/data/db
 

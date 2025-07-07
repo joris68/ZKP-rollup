@@ -1,9 +1,9 @@
 
-from sequencer.src.Types import Transaction, AccountsCollection
+from src.Types import Transaction, AccountsCollection
 import json
 import hashlib
 from smt.tree import SparseMerkleTree
-from  sequencer.src.AsyncMongoClient import get_mongo_client
+from  src.AsyncMongoClient import get_mongo_client
 import os
 import logging
 
@@ -11,8 +11,11 @@ logger = logging.getLogger(__name__)
 
 class MerkleTreeController:
 
-    def __init__(self):
-        self.sparse_merkle_tree = self.initilize_sparse_merkle_tree()
+    def __init__(self, with_account_setup : bool):
+        if with_account_setup:
+            self.sparse_merkle_tree = self.initilize_sparse_merkle_tree()
+        else:
+            self.sparse_merkle_tree = SparseMerkleTree()
         self.mongo_client = get_mongo_client()
 
     
@@ -25,14 +28,10 @@ class MerkleTreeController:
             logger.info(f"in badge : {badge_id} and transaction: {transaction.transactionId} did not pass the invariants")
             logger.error("invariants problem: tree invariants failed")
             raise Exception("Tree invariants failed")
-        
-
         try:
             new_sender_leaf_data = await self.update_sender_leaf_return_bytes(badge_id=badge_id, transaction=transaction)
-            logger.info(type(new_sender_leaf_data))
             self.sparse_merkle_tree.update(bytes.fromhex(transaction.sender), new_sender_leaf_data)
             new_receiver_leaf = await self.update_receiver_bytes_return_bytes(badge_id=badge_id, transaction=transaction)
-            logger.info(type(new_receiver_leaf))
             self.sparse_merkle_tree.update(bytes.fromhex(transaction.receiver), new_receiver_leaf)
         except Exception as e:
             logger.error(f"Error when updating leaf data : {e}")
@@ -225,8 +224,6 @@ class MerkleTreeController:
                     logger.info(f"{e}")
                     return False
     
-
-
 
     def initilize_sparse_merkle_tree(self) -> SparseMerkleTree:
         logger.info("starting to initialize sparse merkle tree")

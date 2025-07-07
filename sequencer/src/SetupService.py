@@ -1,17 +1,19 @@
 
-from sequencer.src.AsyncMongoClient import get_mongo_client
+from src.AsyncMongoClient import get_mongo_client
 import logging
 import os
-from sequencer.src.Types import AccountsCollection, TransactionBadge, BadgeStatus, CurrentBadge
+from src.Types import AccountsCollection, TransactionBadge, BadgeStatus, CurrentBadge
 import sys
 import json
-from sequencer.src.utils import generate_random_id, get_current_timestamp
+from src.utils import generate_random_id, get_current_timestamp
+import asyncio
 
 
 logger = logging.getLogger(__name__)
 
 class SetupService:
-    def __init__(self):
+    def __init__(self, start_users_needed : bool):
+        self.start_users_needed = start_users_needed
         self.mongo_client = get_mongo_client()
 
     async def insert_start_users(self):
@@ -59,8 +61,6 @@ class SetupService:
                 transactions=[],
                 prevBadge="0"
             )
-
-
             try:
                 await badges_col.insert_one(genesis_badge.model_dump())
                 logger.info("Genesis badge inserted successfully.")
@@ -78,5 +78,7 @@ class SetupService:
                 sys.exit(1)
     
     async def on_start(self) -> None:
-        await self.insert_start_users()
+        if self.start_users_needed:
+            await self.insert_start_users()
         await self.setup_genesis_badge()
+
