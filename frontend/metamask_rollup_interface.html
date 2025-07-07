@@ -54,19 +54,18 @@
 </head>
 <body>
     <div class="container">
-        <h1>🦊 MetaMask Transaction Signer</h1>
-        <h3 style="text-align: center; color: #666;">Recovery Version - Uses Address Only</h3>
+        <h1>zk-Rollup Transaction Signer</h1>
         
         <div class="status info">
-            📋 This tool creates MetaMask signatures for RISC Zero verification using signature recovery. Just provide your address - no public key extraction needed!
+            Create a Tx for our fresh zk-Rollup using a standard browser wallet extension!
         </div>
         
         <div id="status" class="status warning">
-            📡 Ready to connect to MetaMask...
+            📡 Ready to connect to Wallet...
         </div>
 
         <button id="connectBtn" onclick="connectWallet()">
-            Connect MetaMask
+            Connect Wallet
         </button>
 
         <div class="form-group">
@@ -91,7 +90,7 @@
         </div>
 
         <button onclick="signTransaction()" disabled id="signBtn">
-            Sign Transaction for RISC Zero
+            Sign Transaction 
         </button>
 
         <div id="output" class="output"></div>
