@@ -1,9 +1,9 @@
 
-from sequencer.src.Types import Transaction, AccountsCollection
+from src.Types import Transaction, AccountsCollection
 import json
 import hashlib
 from smt.tree import SparseMerkleTree
-from  sequencer.src.AsyncMongoClient import get_mongo_client
+from  src.AsyncMongoClient import get_mongo_client
 import os
 import logging
 
@@ -11,8 +11,11 @@ logger = logging.getLogger(__name__)
 
 class MerkleTreeController:
 
-    def __init__(self):
-        self.sparse_merkle_tree = self.initilize_sparse_merkle_tree()
+    def __init__(self, with_account_setup : bool):
+        if with_account_setup:
+            self.sparse_merkle_tree = self.initilize_sparse_merkle_tree()
+        else:
+            self.sparse_merkle_tree = SparseMerkleTree()
         self.mongo_client = get_mongo_client()
 
     

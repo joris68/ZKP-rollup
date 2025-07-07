@@ -1,11 +1,11 @@
 
-from sequencer.src.Types import Transaction
+from src.Types import Transaction
 import os
 import logging
 from nacl.signing import VerifyKey
 import hashlib
 import struct
-from sequencer.src.utils import create_message_from_transaction_body
+from src.utils import create_message_from_transaction_body
 
 logger = logging.getLogger(__name__)
 

@@ -8,8 +8,8 @@ import json
 from dotenv import load_dotenv
 from typing import AsyncGenerator
 from contextlib import asynccontextmanager
-from sequencer.src.Types import TransactionRequest, SubmissionResponse
 from src.BadgeController import BadgeController
+from src.Types import TransactionRequest, SubmissionResponse
 
 logging.basicConfig(
     level=logging.INFO,

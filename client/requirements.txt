@@ -8,6 +8,7 @@ bitarray==3.4.3
 blinker==1.9.0
 Brotli==1.1.0
 certifi==2025.6.15
+cffi==1.17.1
 charset-normalizer==3.4.2
 ckzg==2.1.1
 click==8.2.1
@@ -43,9 +44,11 @@ parsimonious==0.10.0
 platformdirs==4.3.8
 propcache==0.3.2
 psutil==7.0.0
+pycparser==2.22
 pycryptodome==3.23.0
 pydantic==2.11.7
 pydantic_core==2.33.2
+PyNaCl==1.5.0
 python-engineio==4.12.2
 python-socketio==5.13.0
 pyunormalize==16.0.0

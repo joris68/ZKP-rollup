@@ -1,11 +1,11 @@
 
-from sequencer.src.AsyncMongoClient import get_mongo_client
-from sequencer.src.Types import Transaction, TransactionStatus
+from src.AsyncMongoClient import get_mongo_client
+from src.Types import Transaction, TransactionStatus, SubmissionResponse
 import logging
 import os
 from pymongo import DESCENDING
 import asyncio
-from sequencer.src.TransactionValidator import Transaction_Validator
+from src.TransactionValidator import Transaction_Validator
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ class MemPool:
         self.validator = Transaction_Validator()
     
 
-    async def insert_into_queue(self, transaction : Transaction, submisson_id):
+    async def insert_into_queue(self, transaction : Transaction, submisson_id) -> SubmissionResponse:
         
         transaction_valid = await self.validator.check_transaction_validity(transaction= transaction, submission_id=submisson_id)
 
@@ -38,6 +38,7 @@ class MemPool:
                     trans_col = db[os.environ["TRANSACTIONS"]]
                     await trans_col.insert_one(transaction_dict, session=session)
                     logger.info("transaction successfully inserted into the queue")
+                    return SubmissionResponse(submisson_id = submisson_id, valid = transaction_valid)
                 except Exception as e:
                     logger.error(f"Failed to process transaction: {e}")
                     raise e

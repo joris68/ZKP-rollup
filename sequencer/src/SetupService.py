@@ -10,6 +10,10 @@ from sequencer.src.utils import generate_random_id, get_current_timestamp
 
 logger = logging.getLogger(__name__)
 
+"""
+     This service is only for setting up an initial state in the Database.
+"""
+
 class SetupService:
     def __init__(self):
         self.mongo_client = get_mongo_client()

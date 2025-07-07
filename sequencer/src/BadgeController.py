@@ -1,13 +1,12 @@
-from sequencer.src.utils import get_current_timestamp
-from sequencer.src.MemPool import MemPool
-from sequencer.src.Types import BadgeExecutionCause, TransactionBadge, TransactionStatus, BadgeStatus, Transaction, TransactionRequest, SubmissionResponse
-from sequencer.src.AsyncMongoClient import get_mongo_client
+from src.utils import get_current_timestamp
+from src.MemPool import MemPool
+from src.Types import BadgeExecutionCause, TransactionBadge, TransactionStatus, BadgeStatus, Transaction, TransactionRequest, SubmissionResponse
+from src.AsyncMongoClient import get_mongo_client
 import logging
-from sequencer.src.MerkleTreeController import MerkleTreeController
-from sequencer.src.utils import generate_random_id, create_message_from_transaction_body
+from src.MerkleTreeController import MerkleTreeController
+from src.utils import generate_random_id
 import os
 import hashlib
-import asyncio
 
 
 
@@ -26,7 +25,7 @@ class BadgeController:
         self.last_timestamp = get_current_timestamp()
         self.mempool = MemPool()
         self.mongo_client = get_mongo_client()
-        self.tree_controller = MerkleTreeController()
+        self.tree_controller = MerkleTreeController(with_account_setup=False)
     
 
     async def _get_transaction_for_badge(self, badge_execution_cause : BadgeExecutionCause) -> list[Transaction]:
@@ -99,8 +98,8 @@ class BadgeController:
             logger.info({
                 "new_state_root": new_merkle_root,
                 "old_state_root" : old_merkle_root,
-                "blocknumber":  blocknumber +1,
-                "transactions" : self.pydantic_to_json(transactions_for_delta),
+                "blocknumber":  blocknumber + 1,
+                "transactions" : [x.model_dump() for x in transactions_for_delta],
                 "leaf_data_before" : "a"
             })
 
@@ -122,15 +121,13 @@ class BadgeController:
         except Exception as e:
             logger.error(f"{e}")
     
-    def pydantic_to_json(self, transactions : list[Transaction]) -> list[dict]:
-        return [x.model_dump() for x in transactions]
 
     async def get_leaf_data_(self) -> list[dict]:
         db = self.mongo_client[os.environ["DB_NAME"]]
         curr_col = db[os.environ["USERS"]]
         users = await curr_col.find({})
 
-    async def get_previous_block_information(self) -> tuple[str, int]:
+    async def get_previous_block_information(self) -> tuple[str, int, str]:
         """
             Gets prev blockhash and blocknumber to increment
         """
@@ -207,10 +204,8 @@ class BadgeController:
     async def handel_transaction_submission(self, transaction_request : TransactionRequest) -> SubmissionResponse:
         submission_id = generate_random_id()
         trans = self.enrich_transaction(transaction_request=transaction_request, submission_id=submission_id)
-        await self.mempool.insert_into_queue(trans, submisson_id=submission_id)
-        logger.info("Inserted transaction into mempool")
+        return await self.mempool.insert_into_queue(trans, submisson_id=submission_id)
         
-    
     # async def badge_execution_task(self):
     #     logger.info("starting task")
     #     while True:

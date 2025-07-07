@@ -18,7 +18,7 @@ logging.basicConfig(
 AMOUNT = 1
 NONCES = {i: 0 for i in range(9)}
 
-Sequencer_API = "http://127.0.0.1:8080/api/submit"
+SEQUENCER_URL = "http://127.0.0.1:8000"
 
 NODE_URL = "http://127.0.0.1:8545"
 CONTRACT_ADDRESS = "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512"
@@ -108,23 +108,22 @@ def create_transaction(sender : dict , receiver: dict, sender_idx : int) -> dict
             }
         }
 
-async def create_transaction_to_submit():
+def create_transaction_to_submit():
         a, b = choose_random_transaction_pair(LAYER_2_ACCOUNTS["accounts"])
         sender = LAYER_2_ACCOUNTS["accounts"][a]
         receiver = LAYER_2_ACCOUNTS["accounts"][b]
         return create_transaction(sender, receiver, a)
     
-
-
 class StefanJorisRollUpUser(HttpUser):
+    host = SEQUENCER_URL
 
-    def on_start(self):
-        add_users_to_the_rollup()
-    
+    # def on_start(self):
+    #     add_users_to_the_rollup()
+
     @task
     def submit_transaction(self):
         transaction = create_transaction_to_submit()
-        self.client.post(Sequencer_API, json=transaction)
+        self.client.post("/api/submit", json=transaction) 
 
 
 

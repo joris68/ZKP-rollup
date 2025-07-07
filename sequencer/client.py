@@ -5,7 +5,7 @@ import hashlib
 import requests
 import time
 
-JSON_PATH = "initial_account_state.json"
+JSON_PATH = "initial_state.json"
 
 SEQUNCER_URL = "http://0.0.0.0:8000/api/submit"
 
