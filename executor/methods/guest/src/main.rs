@@ -1,172 +1,348 @@
-#![no_std]
 #![no_main]
+#![no_std]
 extern crate alloc;
-use alloc::vec::Vec;
 use risc0_zkvm::guest::env;
-use sha2::{Sha256, Digest};
-use ed25519_dalek::{Signature, VerifyingKey, Verifier};
+use serde::{Deserialize, Serialize};
+use smt::{AccountData, new_smt, root, update, address_to_tree_key, h256_to_hex, hex_to_address};
 
-const TREE_DEPTH: usize = 3;
+// Import alloc types
+use alloc::{
+    string::String,
+    vec::Vec,
+    format,
+};
 
-fn read_u32() -> u32 { env::read() }
-fn read_u64() -> u64 {
-    let parts: [u32; 2] = env::read();
-    (parts[0] as u64) | ((parts[1] as u64) << 32)
-}
-fn read_bytes32() -> [u8; 32] {
-    let mut buf = [0u8; 32];
-    env::read_slice(&mut buf);
-    buf
-}
+// RISC Zero precompiles for cryptography
+use k256::ecdsa::{Signature, VerifyingKey, RecoveryId};
+use k256::elliptic_curve::sec1::ToEncodedPoint;
+use sha3::{Keccak256, Digest};
 
-fn hash_pair(left: &[u8; 32], right: &[u8; 32]) -> [u8; 32] {
-    let mut h = Sha256::new();
-    h.update(left);
-    h.update(right);
-    h.finalize().into()
-}
-
-fn pack_bn(balance: u64, nonce: u64) -> [u8; 32] {
-    let mut h = Sha256::new();
-    h.update(&balance.to_le_bytes());
-    h.update(&nonce.to_le_bytes());
-    h.finalize().into()
+// Same structs as in your batch generator
+#[derive(Serialize, Deserialize, Clone)]
+struct LeafData {
+    balance: u64,
+    nonce: u64,
 }
 
-fn read_proof(depth: usize) -> Vec<(u32, [u8; 32])> {
-    let mut proof = Vec::with_capacity(depth);
-    for _ in 0..depth {
-        let dir = read_u32();
-        let mut sib = [0u8; 32];
-        env::read_slice(&mut sib);
-        proof.push((dir, sib));
+#[derive(Serialize, Deserialize, Clone)]
+struct TransactionSignature {
+    #[serde(rename = "pubKey")]
+    pub_key: String, // Ethereum address (will be verified via recovery)
+    signature: String, // 65-byte signature (r + s + v)
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+struct Transaction {
+    from: String,
+    to: String,
+    amount: u64,
+    nonce: u64,
+    signature: TransactionSignature,
+}
+
+#[derive(Serialize, Deserialize)]
+struct Batch {
+    old_merkle_root: String,
+    new_merkle_root: String,
+    leaf_data: Vec<LeafData>,
+    transactions: Vec<Transaction>,
+    badge_id: u32,
+    addresses: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct BatchProof {
+    old_root_verified: bool,
+    new_root_verified: bool,
+    signatures_verified: bool,
+    old_root: String,
+    new_root: String,
+    badge_id: u32,
+    transactions_processed: usize,
+}
+
+// Helper function to convert hex string to bytes
+fn hex_to_bytes(hex_str: &str) -> Result<Vec<u8>, &'static str> {
+    let clean = hex_str.strip_prefix("0x").unwrap_or(hex_str);
+    
+    if clean.len() % 2 != 0 {
+        return Err("Hex string must have even length");
     }
-    proof
-}
-
-fn compute_root(mut cur: [u8; 32], proof: &[(u32, [u8; 32])]) -> [u8; 32] {
-    for &(dir, ref sib) in proof {
-        cur = if dir == 0 { hash_pair(&cur, sib) } else { hash_pair(sib, &cur) };
-    }
-    cur
-}
-
-fn bytes_to_words(bytes: &[u8; 32]) -> [u32; 8] {
-    let mut words = [0u32; 8];
-    for i in 0..8 {
-        words[i] = u32::from_le_bytes([
-            bytes[i * 4],
-            bytes[i * 4 + 1],
-            bytes[i * 4 + 2],
-            bytes[i * 4 + 3],
-        ]);
-    }
-    words
-}
-
-fn main() {
-    // 1) initial root
-    let mut current = read_bytes32();
-    // 2) # of txs
-    let tx_count = read_u32() as usize;
-
-    for _ in 0..tx_count {
-        // — Sender side —
-        let addr_s = read_bytes32();
-        let bal_s = read_u64();
-        let non_s = read_u64();
-        let proof_s = read_proof(TREE_DEPTH);
-
-        // — Tx payload —
-        let addr_r = read_bytes32();
-        let amt   = read_u64();
-        let tx_n  = read_u64();
-        let mut sig_buf = [0u8; 64];
-        env::read_slice(&mut sig_buf);
-        let mut pk_buf  = [0u8; 32];
-        env::read_slice(&mut pk_buf);
-
-        // 3) Verify sender inclusion against `current`
-        let mut h = Sha256::new();
-        h.update(&addr_s);
-        h.update(&pack_bn(bal_s, non_s));
-        let leaf_s: [u8; 32] = h.finalize().into();
-        assert_eq!(compute_root(leaf_s, &proof_s), current);
-
-        // 4) Verify signature & invariants
-        let mut m = Sha256::new();
-        m.update(&addr_r);
-        m.update(&amt.to_le_bytes());
-        m.update(&tx_n.to_le_bytes());
-        let signature = Signature::from_bytes(&sig_buf);
-        let vk = VerifyingKey::from_bytes(&pk_buf).expect("Invalid public key bytes");
-       vk.verify(&m.finalize(), &signature).expect("Signature verification failed");
-        assert!(amt <= bal_s);
-        assert!(tx_n == non_s);
-
-        // 5) Debit sender → intermediate root
-        let new_leaf_s = {
-            let mut h2 = Sha256::new();
-            h2.update(&addr_s);
-            h2.update(&pack_bn(bal_s - amt, non_s + 1));
-            h2.finalize().into()
-        };
-        let intermediate = compute_root(new_leaf_s, &proof_s);
-
-        // — Receiver side —
-        let bal_r = read_u64();
-        let non_r = read_u64();
-        let mut proof_r = read_proof(TREE_DEPTH);
-
-        // — Patch the *correct* sibling in receiver proof — 
-
-        // Build old partials:
-        let mut partials_old = Vec::with_capacity(TREE_DEPTH+1);
-        partials_old.push(leaf_s);
-        for &(dir, ref sib) in &proof_s {
-            let last = *partials_old.last().unwrap();
-            partials_old.push(
-                if dir==0 { hash_pair(&last, sib) }
-                else     { hash_pair(sib, &last) }
-            );
+    
+    let mut bytes = Vec::new();
+    for i in (0..clean.len()).step_by(2) {
+        let byte_str = &clean[i..i+2];
+        match u8::from_str_radix(byte_str, 16) {
+            Ok(byte) => bytes.push(byte),
+            Err(_) => return Err("Invalid hex character"),
         }
-        // Build new partials:
-        let mut partials_new = Vec::with_capacity(TREE_DEPTH+1);
-        partials_new.push(new_leaf_s);
-        for &(dir, ref sib) in &proof_s {
-            let last = *partials_new.last().unwrap();
-            partials_new.push(
-                if dir==0 { hash_pair(&last, sib) }
-                else     { hash_pair(sib, &last) }
-            );
-        }
-        // Find & replace the matching sibling:
-        for i in 0..TREE_DEPTH {
-            if proof_r[i].1 == partials_old[i] {
-                proof_r[i].1 = partials_new[i];
-                break;
-            }
-        }
-
-        // 9) Verify receiver inclusion against `intermediate`
-        let mut h3 = Sha256::new();
-        h3.update(&addr_r);
-        h3.update(&pack_bn(bal_r, non_r));
-        let leaf_r: [u8; 32] = h3.finalize().into();
-        assert_eq!(compute_root(leaf_r, &proof_r), intermediate);
-
-        // 10) Credit receiver → new current
-        let new_leaf_r = {
-            let mut h4 = Sha256::new();
-            h4.update(&addr_r);
-            h4.update(&pack_bn(bal_r + amt, non_r));
-            h4.finalize().into()
-        };
-        current = compute_root(new_leaf_r, &proof_r);
     }
+    Ok(bytes)
+}
 
-    // 11) Commit final root
-    env::commit(&bytes_to_words(&current));
+// Helper function to encode bytes to hex string
+fn hex_encode(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{:02x}", b)).collect()
+}
+
+// MetaMask signature verification with recovery
+fn verify_metamask_signature(tx: &Transaction) -> bool {
+    // 1. Parse the signature (65 bytes: r + s + v)
+    let signature_bytes = match hex_to_bytes(&tx.signature.signature) {
+        Ok(bytes) if bytes.len() == 65 => bytes,
+        _ => return false,
+    };
+    
+    // Extract r, s, and recovery ID
+    let r = &signature_bytes[0..32];
+    let s = &signature_bytes[32..64];
+    let recovery_id = signature_bytes[64];
+    
+    // Create ECDSA signature from r and s
+    let mut sig_bytes = [0u8; 64];
+    sig_bytes[0..32].copy_from_slice(r);
+    sig_bytes[32..64].copy_from_slice(s);
+    
+    let signature = match Signature::from_bytes(&sig_bytes.into()) {
+        Ok(sig) => sig,
+        Err(_) => return false,
+    };
+    
+    // 2. Recreate the message that was signed
+    let message = create_transaction_message(&tx.from, &tx.to, tx.amount, tx.nonce);
+    let message_hash = hash_ethereum_message(&message);
+    
+    // 3. Recover public key and verify it matches the sender address
+    recover_and_verify_signature(&message_hash, &signature, recovery_id, &tx.from)
+}
+
+// Recover public key and verify it matches the expected Ethereum address
+fn recover_and_verify_signature(
+    message_hash: &[u8; 32],
+    signature: &Signature,
+    recovery_id: u8,
+    expected_address: &str,
+) -> bool {
+    // Normalize recovery_id (MetaMask uses 27/28, secp256k1 uses 0/1)
+    let recovery_id = if recovery_id >= 27 {
+        recovery_id - 27
+    } else {
+        recovery_id
+    };
+    
+    if recovery_id > 1 {
+        return false;
+    }
+    
+    let recovery_id = match RecoveryId::try_from(recovery_id) {
+        Ok(id) => id,
+        Err(_) => return false,
+    };
+    
+    // Use VerifyingKey::recover_from_prehash instead of trial recovery
+    let verifying_key = match VerifyingKey::recover_from_prehash(message_hash, signature, recovery_id) {
+        Ok(key) => key,
+        Err(_) => return false,
+    };
+    
+    // Convert the recovered public key to an Ethereum address
+    let recovered_address = match public_key_to_ethereum_address(&verifying_key) {
+        Ok(addr) => addr,
+        Err(_) => return false,
+    };
+    
+    // Compare with expected address (case insensitive)
+    recovered_address.to_lowercase() == expected_address.to_lowercase()
+}
+
+// Convert a VerifyingKey to an Ethereum address
+fn public_key_to_ethereum_address(verifying_key: &VerifyingKey) -> Result<String, &'static str> {
+    // Get the public key point in uncompressed format
+    let public_key = verifying_key.as_affine();
+    let encoded_point = public_key.to_encoded_point(false);
+    let public_key_bytes = encoded_point.as_bytes();
+    
+    // Remove the 0x04 prefix and take the x,y coordinates (64 bytes)
+    if public_key_bytes.len() < 65 {
+        return Err("Invalid public key format");
+    }
+    let public_key_64 = &public_key_bytes[1..65];
+    
+    // Hash with Keccak256 and take last 20 bytes for Ethereum address
+    let mut hasher = Keccak256::new();
+    hasher.update(public_key_64);
+    let hash = hasher.finalize();
+    let address_bytes = &hash[12..32];
+    
+    // Convert to hex string with 0x prefix
+    Ok(format!("0x{}", hex_encode(address_bytes)))
+}
+
+// Create the same transaction message format as MetaMask
+fn create_transaction_message(from: &str, to: &str, amount: u64, nonce: u64) -> String {
+    // This should match exactly what was signed in MetaMask
+    // For personal_sign (simple message):
+    format!(r#"{{"sender":"{}","receiver":"{}","amount":"{}","nonce":"{}"}}"#, 
+            from, to, amount, nonce)
+}
+
+// Hash message with Ethereum prefix (same as MetaMask personal_sign)
+fn hash_ethereum_message(message: &str) -> [u8; 32] {
+    let prefix = format!("\x19Ethereum Signed Message:\n{}", message.len());
+    let mut full_message = Vec::new();
+    full_message.extend_from_slice(prefix.as_bytes());
+    full_message.extend_from_slice(message.as_bytes());
+    
+    // Use RISC Zero's accelerated Keccak256
+    let mut hasher = Keccak256::new();
+    hasher.update(&full_message);
+    hasher.finalize().into()
+}
+
+// Find account index by address
+fn find_account_index(addresses: &[String], target_address: &str) -> Option<usize> {
+    addresses.iter().position(|addr| addr == target_address)
 }
 
 risc0_zkvm::guest::entry!(main);
+
+fn main() {
+    let batch: Batch = env::read();
+    let mut tree = new_smt();
+    
+    // Initialize tree with all accounts from the batch
+    let mut account_keys = Vec::new();
+    
+    for (i, address) in batch.addresses.iter().enumerate() {
+        let address_bytes = hex_to_address(address).expect("Invalid address");
+        let key = address_to_tree_key(&address_bytes);
+        account_keys.push(key);
+        
+        let account_data = AccountData {
+            balance: batch.leaf_data[i].balance,
+            nonce: batch.leaf_data[i].nonce,
+        };
+        
+        update(&mut tree, key, account_data);
+    }
+    
+    // Verify old root
+    let computed_old_root = h256_to_hex(&root(&tree));
+    let old_root_verified = computed_old_root == batch.old_merkle_root;
+    
+    // Verify signatures for all transactions using recovery
+    let mut signatures_verified = true;
+    
+    for tx in &batch.transactions {
+        // Verify MetaMask signature using recovery-based verification
+        if !verify_metamask_signature(tx) {
+            signatures_verified = false;
+            break;
+        }
+        
+        // Additional check: ensure pubKey matches from address
+        if tx.signature.pub_key.to_lowercase() != tx.from.to_lowercase() {
+            signatures_verified = false;
+            break;
+        }
+    }
+    
+    // Apply transactions only if signatures are valid
+    let mut computed_new_root = computed_old_root.clone();
+    let mut transactions_processed = 0;
+    
+    if signatures_verified {
+        // Create a working copy of account data
+        let mut working_accounts = batch.leaf_data.clone();
+        
+        for tx in &batch.transactions {
+            // Find sender and receiver indices
+            let from_idx = find_account_index(&batch.addresses, &tx.from);
+            let to_idx = find_account_index(&batch.addresses, &tx.to);
+            
+            if let (Some(from_idx), Some(to_idx)) = (from_idx, to_idx) {
+                // Handle the case where sender and receiver are the same (self-transfer)
+                if from_idx == to_idx {
+                    let account = &mut working_accounts[from_idx];
+                    // Validate transaction
+                    if account.balance >= tx.amount && account.nonce == tx.nonce {
+                        // Self-transfer: only update nonce (balance stays same)
+                        account.nonce += 1;
+                        
+                        let account_data = AccountData {
+                            balance: account.balance,
+                            nonce: account.nonce,
+                        };
+                        update(&mut tree, account_keys[from_idx], account_data);
+                        transactions_processed += 1;
+                    } else {
+                        signatures_verified = false;
+                        break;
+                    }
+                } else {
+                    // Different accounts - need to split the vector to avoid borrow conflicts
+                    let (_min_idx, max_idx) = if from_idx < to_idx { (from_idx, to_idx) } else { (to_idx, from_idx) };
+                    
+                    // Split the vector at the boundary
+                    let (left, right) = working_accounts.split_at_mut(max_idx);
+                    
+                    let (from_account, to_account) = if from_idx < to_idx {
+                        (&mut left[from_idx], &mut right[0])
+                    } else {
+                        (&mut right[0], &mut left[to_idx])
+                    };
+                    
+                    // Validate transaction
+                    if from_account.balance >= tx.amount && from_account.nonce == tx.nonce {
+                        // Apply transaction logic
+                        from_account.balance -= tx.amount;
+                        from_account.nonce += 1;
+                        to_account.balance += tx.amount;
+                        
+                        // Update tree with new state
+                        let from_account_data = AccountData {
+                            balance: from_account.balance,
+                            nonce: from_account.nonce,
+                        };
+                        let to_account_data = AccountData {
+                            balance: to_account.balance,
+                            nonce: to_account.nonce,
+                        };
+                        
+                        update(&mut tree, account_keys[from_idx], from_account_data);
+                        update(&mut tree, account_keys[to_idx], to_account_data);
+                        
+                        transactions_processed += 1;
+                    } else {
+                        // Invalid transaction - insufficient balance or wrong nonce
+                        signatures_verified = false;
+                        break;
+                    }
+                }
+            } else {
+                // Account not found
+                signatures_verified = false;
+                break;
+            }
+        }
+        
+        // Compute new root after all transactions
+        computed_new_root = h256_to_hex(&root(&tree));
+    }
+    
+    // Verify new root
+    let new_root_verified = computed_new_root == batch.new_merkle_root;
+    
+    let proof = BatchProof {
+        old_root_verified,
+        new_root_verified,
+        signatures_verified,
+        old_root: computed_old_root,
+        new_root: computed_new_root,
+        badge_id: batch.badge_id,
+        transactions_processed,
+    };
+    
+    // Commit the proof result to the journal
+    env::commit(&proof);
+}

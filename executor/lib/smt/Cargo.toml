@@ -1,0 +1,16 @@
+[package]
+name = "smt"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Use the R0-optimized sha2 and keccak (via sha3)
+sha2 = "0.10"
+sha3 = "0.10"
+sparse-merkle-tree = { version = "0.6.1" }
+
+# Patch crates.io to pull in the risczero precompile-optimized forks:
+[patch.crates-io]
+sha2 = { git = "https://github.com/risc0/RustCrypto-hashes", tag = "sha2-v0.10.8-risczero.0" }
+sha3 = { git = "https://github.com/risc0/RustCrypto-hashes", tag = "sha3-v0.10.8-risczero.0" }
+crypto-bigint = { git = "https://github.com/risc0/crypto-bigint", tag = "v0.5.5-risczero.0" }

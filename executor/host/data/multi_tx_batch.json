@@ -1,0 +1,46 @@
+{
+  "old_merkle_root": "0xaadc52e9127dcf5f92a794f5eea69dfdf6c03b78b94dd96055ef42a447a314d6",
+  "new_merkle_root": "0xf8a060bb459ff46a9e2eb89f8b38bb0458c003ec44450bde4d5330f13290b439",
+  "leaf_data": [
+    {
+      "balance": 500000000000000000,
+      "nonce": 0
+    },
+    {
+      "balance": 2000000000000000000,
+      "nonce": 4
+    },
+    {
+      "balance": 1000000000000000000,
+      "nonce": 8
+    }
+  ],
+  "transactions": [
+    {
+      "from": "0xc18cf086a724527e3fc146b85fad56e2676c27c3",
+      "to": "0x9876543210987654321098765432109876543210",
+      "amount": 1500000000000000000,
+      "nonce": 4,
+      "signature": {
+        "pubKey": "0xc18cf086a724527e3fc146b85fad56e2676c27c3",
+        "signature": "0xc5786b338271353842fd7b9349f2653a7a64cbee7c659f88317251f49fec41730b1021f63953491c8be12a4ef929d73e88adad1b2c433c297c99bdbbf032be061c"
+      }
+    },
+    {
+      "from": "0xf67af36ced72794057c5093d4586fefd1f71c9c0",
+      "to": "0x9876543210987654321098765432109876543210",
+      "amount": 400000000000000000,
+      "nonce": 8,
+      "signature": {
+        "pubKey": "0xf67af36ced72794057c5093d4586fefd1f71c9c0",
+        "signature": "0xee58987fdd09e9dd9d933b9e7f78b83f1477d2b6f36ec7fd4b280e9f02d9dc5d6652d5b06634330c4c97051841925eaf4cd73f7ac516e2ec5b9e61ed54cf8fa41b"
+      }
+    }
+  ],
+  "badge_id": 1,
+  "addresses": [
+    "0x9876543210987654321098765432109876543210",
+    "0xc18cf086a724527e3fc146b85fad56e2676c27c3",
+    "0xf67af36ced72794057c5093d4586fefd1f71c9c0"
+  ]
+}
