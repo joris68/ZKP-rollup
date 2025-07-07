@@ -3,211 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MetaMask Signing Demo - Local Version</title>
+    <title>MetaMask Transaction Signer (Recovery Version)</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            max-width: 900px;
+            font-family: Arial, sans-serif;
+            max-width: 800px;
             margin: 0 auto;
             padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            background-color: #f5f5f5;
         }
         .container {
             background: white;
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        .method-section {
-            margin: 30px 0;
-            padding: 25px;
-            border: 1px solid #e1e5e9;
+            padding: 20px;
             border-radius: 10px;
-            background: #f8f9fa;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        button {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
+        h1 { color: #333; text-align: center; }
+        .form-group { margin: 15px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        button { 
+            background: #ff6b35; 
+            color: white; 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 5px; 
             cursor: pointer;
-            font-size: 16px;
-            margin: 10px 5px;
-            transition: all 0.3s ease;
+            margin: 5px;
         }
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-        button:disabled {
-            background: #cccccc;
-            cursor: not-allowed;
-            transform: none;
-        }
-        .connect-btn {
-            background: linear-gradient(45deg, #FF6B35, #F7931E);
-        }
-        input {
-            width: 100%;
-            padding: 12px;
-            margin: 8px 0;
-            border: 2px solid #e1e5e9;
-            border-radius: 8px;
-            box-sizing: border-box;
-            font-size: 14px;
-        }
-        input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        .output {
-            background: #1a1a1a;
-            color: #00ff00;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 20px 0;
+        button:hover { background: #e55a2b; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .output { 
+            background: #f8f9fa; 
+            border: 1px solid #dee2e6; 
+            border-radius: 4px; 
+            padding: 15px; 
+            margin: 10px 0;
             white-space: pre-wrap;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            max-height: 400px;
-            overflow-y: auto;
-            border: 1px solid #333;
+            font-family: monospace;
+            display: none;
         }
-        .status {
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: 8px;
-            font-weight: bold;
-        }
-        .success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        .warning {
-            background: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeaa7;
-        }
-        h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        h2 {
-            color: #555;
-            border-bottom: 3px solid #667eea;
-            padding-bottom: 10px;
-        }
-        .tx-form {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin: 20px 0;
-        }
-        .tx-form > div {
-            display: flex;
-            flex-direction: column;
-        }
-        .tx-form label {
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #333;
-        }
-        .copy-btn {
-            background: #28a745;
-            font-size: 12px;
-            padding: 5px 10px;
-            margin-top: 10px;
-        }
-        .instructions {
-            background: #e3f2fd;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 20px 0;
-            border-left: 4px solid #2196f3;
-        }
+        .status { padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .copy-btn { background: #28a745; }
+        .copy-btn:hover { background: #218838; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🦊 MetaMask Custom Data Signing Demo</h1>
+        <h1>🦊 MetaMask Transaction Signer</h1>
+        <h3 style="text-align: center; color: #666;">Recovery Version - Uses Address Only</h3>
         
-        <div class="instructions">
-            <strong>Instructions:</strong>
-            <ol>
-                <li>Save this file as <code>metamask-demo.html</code> on your computer</li>
-                <li>Open it in your browser (Chrome, Firefox, etc.)</li>
-                <li>Make sure MetaMask extension is installed</li>
-                <li>Click "Connect MetaMask" below</li>
-            </ol>
+        <div class="status info">
+            📋 This tool creates MetaMask signatures for RISC Zero verification using signature recovery. Just provide your address - no public key extraction needed!
         </div>
         
         <div id="status" class="status warning">
             📡 Ready to connect to MetaMask...
         </div>
 
-        <button id="connectBtn" class="connect-btn" onclick="connectWallet()">
+        <button id="connectBtn" onclick="connectWallet()">
             Connect MetaMask
         </button>
 
-        <div class="method-section">
-            <h2>🔧 Configure Your Transaction</h2>
-            
-            <div class="tx-form">
-                <div>
-                    <label for="sender">From Address:</label>
-                    <input type="text" id="sender" placeholder="Will auto-fill when connected">
-                </div>
-                <div>
-                    <label for="receiver">To Address:</label>
-                    <input type="text" id="receiver" value="0x9876543210987654321098765432109876543210">
-                </div>
-                <div>
-                    <label for="amount">Amount (ETH):</label>
-                    <input type="number" id="amount" value="1.5" step="0.001">
-                </div>
-                <div>
-                    <label for="nonce">Nonce:</label>
-                    <input type="number" id="nonce" value="42">
-                </div>
-            </div>
+        <div class="form-group">
+            <label for="sender">From Address:</label>
+            <input type="text" id="sender" placeholder="Will auto-fill when connected" readonly>
+            <small style="color: #666;">This address will be used in both 'from' and 'pubKey' fields</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="receiver">To Address:</label>
+            <input type="text" id="receiver" value="0x9876543210987654321098765432109876543210">
+        </div>
+        
+        <div class="form-group">
+            <label for="amount">Amount (wei):</label>
+            <input type="number" id="amount" value="1500000000000000000">
+        </div>
+        
+        <div class="form-group">
+            <label for="nonce">Nonce:</label>
+            <input type="number" id="nonce" value="4">
         </div>
 
-        <div class="method-section">
-            <h2>📝 Method 1: Simple Message Signing</h2>
-            <p>Signs a JSON string of your transaction data</p>
-            
-            <button onclick="signSimpleMessage()" disabled id="signSimpleBtn">
-                Sign JSON Message
-            </button>
-            
-            <div id="simpleOutput" class="output" style="display: none;"></div>
-            <button onclick="copyToClipboard('simpleOutput')" class="copy-btn" id="copySimple" style="display: none;">
-                Copy JSON
-            </button>
-        </div>
+        <button onclick="signTransaction()" disabled id="signBtn">
+            Sign Transaction for RISC Zero
+        </button>
 
-        <div class="method-section">
-            <h2>🔒 Method 2: Structured Data Signing (EIP-712)</h2>
-            <p>Signs structured data using EIP-712 standard - <strong>RECOMMENDED</strong></p>
-            
-            <button onclick="signStructuredData()" disabled id="signStructuredBtn">
-                Sign Structured Data
-            </button>
-            
-            <div id="structuredOutput" class="output" style="display: none;"></div>
-            <button onclick="copyToClipboard('structuredOutput')" class="copy-btn" id="copyStructured" style="display: none;">
-                Copy JSON
-            </button>
-        </div>
+        <div id="output" class="output"></div>
+        <button onclick="copyToClipboard()" class="copy-btn" id="copyBtn" style="display: none;">
+            Copy Transaction JSON
+        </button>
     </div>
 
     <script>
@@ -224,12 +114,7 @@
                     updateStatus(`✅ Connected: ${userAccount}`, 'success');
                     document.getElementById('connectBtn').textContent = '✅ Connected';
                     document.getElementById('connectBtn').disabled = true;
-                    
-                    // Enable signing buttons
-                    document.getElementById('signSimpleBtn').disabled = false;
-                    document.getElementById('signStructuredBtn').disabled = false;
-                    
-                    // Update sender field
+                    document.getElementById('signBtn').disabled = false;
                     document.getElementById('sender').value = userAccount;
                     
                 } catch (error) {
@@ -240,22 +125,25 @@
             }
         }
 
-        async function signSimpleMessage() {
+        async function signTransaction() {
             if (!userAccount) {
                 updateStatus('Please connect your wallet first', 'error');
                 return;
             }
 
             try {
-                const txData = {
-                    sender: document.getElementById('sender').value,
-                    receiver: document.getElementById('receiver').value,
-                    amount: parseFloat(document.getElementById('amount').value),
-                    nonce: parseInt(document.getElementById('nonce').value),
-                    timestamp: Date.now()
-                };
+                const sender = document.getElementById('sender').value;
+                const receiver = document.getElementById('receiver').value;
+                const amount = document.getElementById('amount').value;
+                const nonce = parseInt(document.getElementById('nonce').value);
 
-                const message = JSON.stringify(txData, null, 2);
+                // Create the exact message format that your RISC Zero code expects
+                const message = JSON.stringify({
+                    sender: sender,
+                    receiver: receiver,
+                    amount: amount,
+                    nonce: nonce.toString()
+                });
 
                 updateStatus('🔄 Please check MetaMask and approve the signature...', 'warning');
 
@@ -264,96 +152,44 @@
                     params: [message, userAccount]
                 });
 
+                // Create the transaction format for RISC Zero verification (recovery version)
+                const transactionFormat = {
+                    from: sender,
+                    to: receiver,
+                    amount: parseInt(amount),
+                    nonce: nonce,
+                    signature: {
+                        pubKey: sender, // Using address - recovery will verify this matches
+                        signature: signature
+                    }
+                };
+
                 const result = {
-                    method: 'personal_sign',
-                    originalData: txData,
+                    // Ready-to-use transaction for your JSON batch
+                    transaction: transactionFormat,
+                    
+                    // Debug info
                     messageToSign: message,
-                    signature: signature,
+                    rawSignature: signature,
+                    signatureComponents: {
+                        r: signature.slice(0, 66),
+                        s: '0x' + signature.slice(66, 130),
+                        v: parseInt(signature.slice(130, 132), 16),
+                        recoveryId: parseInt(signature.slice(130, 132), 16)
+                    },
                     signer: userAccount,
-                    signedAt: new Date().toISOString()
+                    signedAt: new Date().toISOString(),
+                    verificationMethod: "ECDSA Recovery - pubKey is address, signature will be recovered and verified"
                 };
 
-                document.getElementById('simpleOutput').style.display = 'block';
-                document.getElementById('simpleOutput').textContent = JSON.stringify(result, null, 2);
-                document.getElementById('copySimple').style.display = 'block';
+                document.getElementById('output').style.display = 'block';
+                document.getElementById('output').textContent = JSON.stringify(result, null, 2);
+                document.getElementById('copyBtn').style.display = 'block';
                 
-                updateStatus('✅ Message signed successfully!', 'success');
+                updateStatus('✅ Transaction signed! Use the "transaction" object in your RISC Zero batch JSON.', 'success');
 
             } catch (error) {
-                updateStatus(`❌ Error signing message: ${error.message}`, 'error');
-            }
-        }
-
-        async function signStructuredData() {
-            if (!userAccount) {
-                updateStatus('Please connect your wallet first', 'error');
-                return;
-            }
-
-            try {
-                const txData = {
-                    sender: document.getElementById('sender').value,
-                    receiver: document.getElementById('receiver').value,
-                    amount: parseFloat(document.getElementById('amount').value),
-                    nonce: parseInt(document.getElementById('nonce').value)
-                };
-
-                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-
-                const domain = {
-                    name: 'Custom Transaction',
-                    version: '1',
-                    chainId: parseInt(chainId, 16),
-                    verifyingContract: '0x0000000000000000000000000000000000000000'
-                };
-
-                const types = {
-                    Transaction: [
-                        { name: 'sender', type: 'address' },
-                        { name: 'receiver', type: 'address' },
-                        { name: 'amount', type: 'uint256' },
-                        { name: 'nonce', type: 'uint256' }
-                    ]
-                };
-
-                const value = {
-                    sender: txData.sender,
-                    receiver: txData.receiver,
-                    amount: Math.floor(txData.amount * 1e18).toString(),
-                    nonce: txData.nonce.toString()
-                };
-
-                const typedData = {
-                    types,
-                    primaryType: 'Transaction',
-                    domain,
-                    message: value
-                };
-
-                updateStatus('🔄 Please check MetaMask and approve the structured signature...', 'warning');
-
-                const signature = await window.ethereum.request({
-                    method: 'eth_signTypedData_v4',
-                    params: [userAccount, JSON.stringify(typedData)]
-                });
-
-                const result = {
-                    method: 'eth_signTypedData_v4',
-                    originalData: txData,
-                    typedData: typedData,
-                    signature: signature,
-                    signer: userAccount,
-                    signedAt: new Date().toISOString()
-                };
-
-                document.getElementById('structuredOutput').style.display = 'block';
-                document.getElementById('structuredOutput').textContent = JSON.stringify(result, null, 2);
-                document.getElementById('copyStructured').style.display = 'block';
-                
-                updateStatus('✅ Structured data signed successfully!', 'success');
-
-            } catch (error) {
-                updateStatus(`❌ Error signing structured data: ${error.message}`, 'error');
+                updateStatus(`❌ Error signing transaction: ${error.message}`, 'error');
             }
         }
 
@@ -363,19 +199,14 @@
             statusDiv.className = `status ${type}`;
         }
 
-        function copyToClipboard(elementId) {
-            const element = document.getElementById(elementId);
-            const text = element.textContent;
-            
+        function copyToClipboard() {
+            const text = document.getElementById('output').textContent;
             navigator.clipboard.writeText(text).then(() => {
                 updateStatus('📋 JSON copied to clipboard!', 'success');
             }).catch(err => {
                 updateStatus('❌ Failed to copy to clipboard', 'error');
             });
         }
-
-        // Generate random nonce on load
-        document.getElementById('nonce').value = Math.floor(Math.random() * 1000000);
     </script>
 </body>
 </html>
