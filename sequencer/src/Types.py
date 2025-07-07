@@ -10,8 +10,7 @@ class SignatureData(BaseModel):
 class TransactionRequest(BaseModel):
     sender: str
     receiver: str
-    amount: int
-    fee: int    
+    amount: int  
     nonce: int
     signature: SignatureData
 
@@ -90,6 +89,19 @@ class CurrentBadge(BaseModel):
 class SubmissionResponse(BaseModel):
     submission_id : str
     valid : bool
+
+class SubmissionStatus(BaseModel):
+    submission_id : str
+    status : str
+
+class NonceResponse(BaseModel):
+    nonce : int
+
+class NonceRequest(BaseModel):
+    account : str
+
+class SubmissionStatusRequest(BaseModel):
+    submission_id : str
 
 
 

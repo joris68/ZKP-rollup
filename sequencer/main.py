@@ -2,14 +2,14 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from fastapi import FastAPI, HTTPException
-from pymongo import MongoClient
+from contextlib import asynccontextmanager
 import logging
 import json
 from dotenv import load_dotenv
-from typing import AsyncGenerator
-from contextlib import asynccontextmanager
 from src.BadgeController import BadgeController
-from src.Types import TransactionRequest, SubmissionResponse
+from src.Types import TransactionRequest, SubmissionResponse, NonceResponse, SubmissionStatus, NonceRequest, SubmissionStatusRequest
+from src.SetupService import SetupService
+import asyncio
 
 logging.basicConfig(
     level=logging.INFO,
@@ -19,15 +19,23 @@ logging.basicConfig(
     ]
 )
 
+logger = logging.getLogger(__name__)
 load_dotenv()
 
-app = FastAPI()
+queue = asyncio.Queue()
+setup_service = SetupService(start_users_needed=True)
+badge_controller = BadgeController(queue=queue)
 
-badge_controller = BadgeController()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await setup_service.on_start()
+    loop = asyncio.get_running_loop()
+    loop.create_task(badge_controller.batch_queue_producer())
+    loop.create_task(badge_controller.batch_queue_consumer())
+    logger.info("setup complete")
+    yield
 
-@app.get("/")
-async def read_root():
-    return {"message": "Welcome to my FastAPI application!"}
+app = FastAPI(lifespan=lifespan)
 
 @app.post("/api/submit")
 async def submit_transaction(transaction: TransactionRequest) -> SubmissionResponse:
@@ -36,9 +44,20 @@ async def submit_transaction(transaction: TransactionRequest) -> SubmissionRespo
     except Exception as e :
         raise HTTPException(status_code=500, detail="Internal server error")
 
-@app.get("/api/get-status")
-async def get_status_from_transaction():
-    pass
+@app.post("/api/get-nonce")
+async def get_nonce_for_account(req : NonceRequest) -> NonceResponse:
+    try:
+        return await badge_controller.get_nonce_for_account(account=req.account)
+    except Exception as e :
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.post("/api/get-status")
+async def get_status_from_transaction(req : SubmissionStatusRequest) -> SubmissionResponse:
+    try:
+        return await badge_controller.get_status_for_transaction(submission_id=req.submission_id)
+    except Exception as e :
+        raise HTTPException(status_code=500, detail="Internal server error")
        
 
 if __name__ == "__main__":

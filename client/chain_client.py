@@ -2,7 +2,7 @@ from web3 import Web3
 from eth_account import Account
 import json
 import logging
-from locust import HttpUser, task
+from locust import HttpUser, task, between
 import numpy as np
 import hashlib
 from nacl.signing import SigningKey
@@ -16,7 +16,6 @@ logging.basicConfig(
 )
 
 AMOUNT = 1
-NONCES = {i: 0 for i in range(9)}
 
 SEQUENCER_URL = "http://127.0.0.1:8000"
 
@@ -88,18 +87,17 @@ def transaction_body_to_bytes(trans_body : dict) -> bytes:
         return hashlib.sha256(msg).digest()
        
 
-def create_transaction(sender : dict , receiver: dict, sender_idx : int) -> dict:
+def create_transaction(sender : dict , receiver: dict, sender_idx : int, nonce: int) -> dict:
+        
         trans_body = {
             "sender" : sender["pub_key"],
             "receiver" : receiver["pub_key"],
             "amount" : AMOUNT,
-            "nonce": NONCES[sender_idx],
-            "fee" : 1
+            "nonce": nonce,
         }
         sk = SigningKey(bytes.fromhex(sender['priv_key']))
         msg = transaction_body_to_bytes(trans_body=trans_body)
         sig = sk.sign(msg).signature
-        NONCES[sender_idx] += 1
         return {
             **trans_body ,
             "signature" :{
@@ -108,22 +106,34 @@ def create_transaction(sender : dict , receiver: dict, sender_idx : int) -> dict
             }
         }
 
-def create_transaction_to_submit():
-        a, b = choose_random_transaction_pair(LAYER_2_ACCOUNTS["accounts"])
+def create_transaction_to_submit(nonce : int, a : int , b : int):
         sender = LAYER_2_ACCOUNTS["accounts"][a]
         receiver = LAYER_2_ACCOUNTS["accounts"][b]
-        return create_transaction(sender, receiver, a)
+        return create_transaction(sender, receiver, a, nonce)
     
 class StefanJorisRollUpUser(HttpUser):
     host = SEQUENCER_URL
-
+    wait_time = between(1, 1.5)
     # def on_start(self):
     #     add_users_to_the_rollup()
 
     @task
     def submit_transaction(self):
-        transaction = create_transaction_to_submit()
-        self.client.post("/api/submit", json=transaction) 
+        a, b = choose_random_transaction_pair(LAYER_2_ACCOUNTS["accounts"])
+        res = self.client.post("/api/get-nonce", json={"account": LAYER_2_ACCOUNTS["accounts"][a]["pub_key"]})
+        if res.status_code != 200:
+            print(f"Failed to get nonce: {res.text}")
+            return
+
+        try:
+            nonce = res.json().get("nonce")
+        except Exception as e:
+            print(f"Failed to parse nonce response: {e}")
+            return
+
+        # Create and submit transaction
+        transaction = create_transaction_to_submit(nonce, a, b)
+        self.client.post("/api/submit", json=transaction)
 
 
 

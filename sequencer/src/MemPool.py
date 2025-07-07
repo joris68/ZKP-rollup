@@ -38,7 +38,7 @@ class MemPool:
                     trans_col = db[os.environ["TRANSACTIONS"]]
                     await trans_col.insert_one(transaction_dict, session=session)
                     logger.info("transaction successfully inserted into the queue")
-                    return SubmissionResponse(submisson_id = submisson_id, valid = transaction_valid)
+                    return SubmissionResponse(submission_id = submisson_id, valid = transaction_valid)
                 except Exception as e:
                     logger.error(f"Failed to process transaction: {e}")
                     raise e
@@ -105,32 +105,3 @@ class MemPool:
                     logger.error(f"Failed to retrieve badge ids from queue: {e}")
                     return []
     
-
-
-
-
- # users_col = db[os.environ["USERS"]]
-                    # await users_col.update_one(
-                    #     {"address": transaction_dict["sender"]},
-                    #     {
-                    #         "$inc": {
-                    #             "latestNonce": 1,
-                    #             "balance": -transaction_dict["amount"]
-                    #         },
-                    #         "$push": {
-                    #             "transactions": transaction_dict["transactionId"]
-                    #         }
-                    #     },
-                    #     session=session
-                    # )
-                    
-                    # await users_col.update_one(
-                    #     {"address": transaction_dict["receiver"]},
-                    #     {
-                    #         "$inc": { 
-                    #             "balance": transaction_dict["amount"]
-                    #         }
-                    #     },
-                    #     session=session
-                    # )
-                    # logger.info(f"Successfully inserted transaction into queue and updated other collections : {transaction_dict['transactionId']}")
