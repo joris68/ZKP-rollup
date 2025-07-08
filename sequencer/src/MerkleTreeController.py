@@ -36,6 +36,15 @@ class MerkleTreeController:
         except Exception as e:
             logger.error(f"Error when updating leaf data : {e}")
             raise e
+    
+    async def handle_deposit_transaction(self, badge_id : str, transaction : Transaction) -> None:
+        try:
+            logger.info("starting to implement the deposit transaction")
+            new_leaf_data= self.leaf_to_bytes(transaction.amount, nonce=0, account=transaction.sender)
+            self.sparse_merkle_tree.update(bytes.fromhex(transaction.sender), new_leaf_data)
+        except Exception as e :
+            logger.error(f"Error when inserting deposit into the tree: {e}")
+            raise e
 
 
     def get_merkle_root(self) -> str:
@@ -191,16 +200,14 @@ class MerkleTreeController:
                     logger.error(f"error in updating the chnagelog for transaction : {transaction.transactionId}")
                     raise e
 
-    # TODO sure if that is correct? with hashing the key, because it gets hashed again?
     async def leaf_to_bytes(self, balance : int, nonce : int , account : str ) -> bytes:
 
         nonce_bytes = int(nonce).to_bytes(8, 'little') 
         balance_bytes = int(balance).to_bytes(8, 'little')
-        hashes_pub = hashlib.sha256(bytes.fromhex(account)).digest()
+        hashes_pub = bytes.fromhex(account)
         msg = balance_bytes + nonce_bytes + hashes_pub
         return msg
         
-
     
     async def _check_tree_invariants_for_update(self, transaction : Transaction) -> bool:
          async with await self.mongo_client.start_session(causal_consistency=True) as session:
@@ -241,10 +248,6 @@ class MerkleTreeController:
         logger.info(tree.root_as_hex())
         return tree
     
-    """
-        The libary hashes the leaf data internally
-        TODO : sure I need to hash the pubkey here?
-    """
     def hash_account_to_leaf_value(self, account_data) -> bytes:
         balance = account_data["balance"]
         nonce = account_data["nonce"]
@@ -253,7 +256,7 @@ class MerkleTreeController:
         nonce_bytes = int(nonce).to_bytes(8, 'little') 
         balance_bytes = int(balance).to_bytes(8, 'little')
 
-        hashes_pub = hashlib.sha256(bytes.fromhex(pub_key)).digest()
+        hashes_pub = bytes.fromhex(pub_key)
         msg = balance_bytes + nonce_bytes + hashes_pub
         return msg
         

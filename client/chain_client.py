@@ -6,6 +6,7 @@ from locust import HttpUser, task, between
 import numpy as np
 import hashlib
 from nacl.signing import SigningKey
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ def load_contract_abi() -> dict:
     return contract_json["abi"]
 
 def load_layer_2_accounts():
-    with open("initial_state.json", "r") as f:
+    with open("funded_accounts.json", "r") as f:
         init_state = json.load(f)
     return init_state
 
@@ -37,11 +38,7 @@ def load_layer_2_accounts():
 LAYER_2_ACCOUNTS = load_layer_2_accounts()
 
 
-def make_deposit_call(address : str, private_key : str):
-    web3 = Web3(Web3.HTTPProvider(NODE_URL))
-    contract_address = web3.to_checksum_address(CONTRACT_ADDRESS)
-    contract_abi = load_contract_abi()
-    contract = web3.eth.contract(address=contract_address, abi=contract_abi)
+def make_deposit_call(address : str, private_key : str, contract, web3):
     gas_estimate = contract.functions.depositETH(address).estimate_gas({
         "from": address,
         "value": web3.to_wei(1, "ether")
@@ -57,19 +54,21 @@ def make_deposit_call(address : str, private_key : str):
     logger.info("Transaction:", tx)
     signed_tx = web3.eth.account.sign_transaction(tx, private_key=private_key)
     tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
-    logger.info("Transaction hash:", tx_hash.hex())
+    logger.info(f"Transaction hash: {tx_hash.hex()}")
     receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
     logger.info("Transaction receipt:", receipt)
+    time.sleep(1)
+    
 
 
 def add_users_to_the_rollup():
-    
     web3 = Web3(Web3.HTTPProvider(NODE_URL))
     contract_address = web3.to_checksum_address(CONTRACT_ADDRESS)
     contract_abi = load_contract_abi()
     contract = web3.eth.contract(address=contract_address, abi=contract_abi)
-    for acc in LAYER_2_ACCOUNTS["accounts"]:
-        make_deposit_call(acc["pub_key"], private_key=acc["priv_key"])
+    for acc in LAYER_2_ACCOUNTS:
+        logger.info(acc)
+        make_deposit_call(acc["pub_key"], private_key=acc["priv_key"], contract=contract, web3=web3)
     logger.info("successfully depsited all accounts")
 
 
@@ -107,20 +106,20 @@ def create_transaction(sender : dict , receiver: dict, sender_idx : int, nonce: 
         }
 
 def create_transaction_to_submit(nonce : int, a : int , b : int):
-        sender = LAYER_2_ACCOUNTS["accounts"][a]
-        receiver = LAYER_2_ACCOUNTS["accounts"][b]
+        sender = LAYER_2_ACCOUNTS[a]
+        receiver = LAYER_2_ACCOUNTS[b]
         return create_transaction(sender, receiver, a, nonce)
     
 class StefanJorisRollUpUser(HttpUser):
     host = SEQUENCER_URL
     wait_time = between(1, 1.5)
-    # def on_start(self):
-    #     add_users_to_the_rollup()
+    def on_start(self):
+        add_users_to_the_rollup()
 
     @task
     def submit_transaction(self):
-        a, b = choose_random_transaction_pair(LAYER_2_ACCOUNTS["accounts"])
-        res = self.client.post("/api/get-nonce", json={"account": LAYER_2_ACCOUNTS["accounts"][a]["pub_key"]})
+        a, b = choose_random_transaction_pair(LAYER_2_ACCOUNTS)
+        res = self.client.post("/api/get-nonce", json={"account": LAYER_2_ACCOUNTS[a]["pub_key"]})
         if res.status_code != 200:
             print(f"Failed to get nonce: {res.text}")
             return
@@ -135,8 +134,3 @@ class StefanJorisRollUpUser(HttpUser):
         transaction = create_transaction_to_submit(nonce, a, b)
         self.client.post("/api/submit", json=transaction)
 
-
-
-
-# if __name__ == "__main__": 
-#     make_deposit_call(address=ACCOUNT_ADDRESS)

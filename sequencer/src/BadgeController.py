@@ -19,6 +19,8 @@ logger = logging.getLogger(__name__)
     Tx rolling hash: H(H(0, t_1), t_2) ....
 """
 
+ZERO_ADDRESS = "0x" + "0" * 40
+
 class BadgeController:
 
     def __init__(self, queue):
@@ -45,7 +47,12 @@ class BadgeController:
             failed_transaction = []
             for t in badged_transaction:
                 try:
-                    await self.tree_controller.make_rollup_transaction_between_existing_users(badge_id=badge_id, transaction=t)
+                    if t.receiver is None:
+                        await self.tree_controller.handle_deposit_transaction(badge_id=badge_id, transaction=t)
+                    elif t.receiver == ZERO_ADDRESS:
+                        pass
+                    else:
+                        await self.tree_controller.make_rollup_transaction_between_existing_users(badge_id=badge_id, transaction=t)
                 except Exception as e:
                     await trans_col.update_one(
                         {"transactionId": t.transactionId},
@@ -90,7 +97,6 @@ class BadgeController:
             old_merkle_root = self.tree_controller.get_merkle_root()
             transactions_for_delta = await self._update_merkle_tree(badged_transaction=badged_transaction, badge_id=badge_id)
             new_merkle_root = self.tree_controller.get_merkle_root()
-            logger.info(new_merkle_root)
             blockhash, blocknumber, prev_id =  await self.get_previous_block_information()
             timestamp = get_current_timestamp()
             curr_block_hash = await self.create_block_hash(blocknumber=blocknumber +1,
@@ -137,7 +143,6 @@ class BadgeController:
             badges_col = db[os.environ["BADGES"]]
             prev_badge = await badges_col.find_one({"badgeId": prev_badge_id})
             a = [prev_badge["blockhash"], prev_badge["blocknumber"], prev_badge["badgeId"]]
-            logger.info(a)
             return a
 
         except Exception as e:
@@ -211,7 +216,6 @@ class BadgeController:
         
     async def batch_queue_consumer(self):
         while True:
-            logger.info("putting new job into the queue")
             item = await self.queue.get()
             await self.form_new_L2_block(execution_cause=item["cause"])
             self.queue.task_done()
@@ -219,7 +223,6 @@ class BadgeController:
     async def batch_queue_producer(self):
         await asyncio.sleep(5)
         while True:
-            logger.info("putting new jon into the queue")
             await self.queue.put({"cause" : BadgeExecutionCause.TIMEDOUT})
             await asyncio.sleep(5)
     

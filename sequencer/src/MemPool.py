@@ -6,6 +6,7 @@ import os
 from pymongo import DESCENDING
 import asyncio
 from src.TransactionValidator import Transaction_Validator
+from src.utils import generate_random_id
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,7 @@ BADGE_SIZE = int(os.environ["BADGE_SIZE"])
 
 class MemPool:
     """
-        This class should also save invaldi transaction as stated in the zkSync Protocol
+        This class should also save invalid transaction as stated in the zkSync Protocol
     """
 
     def __init__(self):
@@ -44,18 +45,25 @@ class MemPool:
                     raise e
     
     async def insert_deposit_transaction(self, address : str, amount : int , current_time_stamp : int):
-        
+        submission_id = generate_random_id()
         async with await self.mongo_client.start_session(causal_consistency=True) as session:
             try:
                 deposit_transaction = Transaction(
                     sender = address,
                     amount = amount,
-                    receivedAt = current_time_stamp
+                    receivedAt = current_time_stamp,
+                    submissionId = submission_id,
+                    transactionId=None,
+                    receiver=None,
+                    nonce=None,
+                    signature=None,
+                    status=TransactionStatus.PENDING.value,
+                    badgeId=None
                 )
                 db = self.mongo_client[os.environ["DB_NAME"]]
                 trans_col = db[os.environ["TRANSACTIONS"]]
                 users_col = db[os.environ["USERS"]]
-                users_col.insert_one({"pub_key" : address, "balance": amount, "nonce" : 0})
+                users_col.insert_one({"address" : address, "balance": amount, "nonce" : 0, "account_updates" :[]})
                 logger.info("new account leaf inserted due to deposit transaction")
                 trans_col.insert_one(deposit_transaction.model_dump())
                 logger.info("deposit transaction successfully included into the mempool queue")

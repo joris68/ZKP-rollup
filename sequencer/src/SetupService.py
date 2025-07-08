@@ -40,13 +40,11 @@ class SetupService:
     def get_state_json(self) -> dict:
         with open("initial_state.json", "r") as file:
             state_data = json.load(file)
-        logger.info(state_data)
         return state_data
         
 
     async def setup_genesis_badge(self):
             state_json = self.get_state_json()
-            logger.info(state_json["initial_state_root"])
             db = self.mongo_client[os.environ["DB_NAME"]]
             badges_col = db[os.environ["BADGES"]]
             geneisis_badge_id = generate_random_id()
@@ -54,7 +52,7 @@ class SetupService:
                 badgeId=geneisis_badge_id,
                 status=BadgeStatus.VERIFIED,
                 blockhash= "0" * 64,
-                state_root = state_json["initial_state_root"],
+                state_root = "0" * 64,
                 blocknumber=0,
                 timestamp= get_current_timestamp(),
                 executionCause=None,
