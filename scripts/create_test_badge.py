@@ -147,7 +147,6 @@ def main(amount_transactions : int, amount_leafs : int, file_name : str):
         "old_merkle_root": start_root,
         "leaf_data" : leaf_data,
         "transactions" : transactions,
-        "inclusion_proofs" : inclusion_proofs,
         "new_merkle_root" : new_merkle_root,
         "badge_id" : badge_id
     }
