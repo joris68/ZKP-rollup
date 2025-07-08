@@ -24,6 +24,7 @@ class ChainListener:
                 raise RuntimeError("Contract initialization failed")
             self.polling_interval = polling_interval
             self.mempool = mempool
+            self.web3_instance = Web3()
         except Exception as e:
             print(e)
             logger.error(f"Error occured in the system using : {e}")
@@ -54,7 +55,8 @@ class ChainListener:
             curr_time_stamp = get_current_timestamp()
             address = deposit_args["layer2Address"]
             amount = deposit_args["amount"]
-            await self.mempool.insert_deposit_transaction(address=address, amount=amount, current_time_stamp=curr_time_stamp)
+            in_eth = self.web3_instance.from_wei(amount, "ether")
+            await self.mempool.insert_deposit_transaction(address=address, amount=int(in_eth), current_time_stamp=curr_time_stamp)
 
     async def deposit_chain_loop(self):
         deposit_event = await self._init_deposit_event_filter()

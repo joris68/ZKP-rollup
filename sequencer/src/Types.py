@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel,  Field
 from enum import Enum
 from typing import Optional
 
@@ -8,8 +8,8 @@ class SignatureData(BaseModel):
     signature: str
 
 class TransactionRequest(BaseModel):
-    sender: str
-    receiver: str
+    sender : str
+    receiver : str
     amount: int  
     nonce: int
     signature: SignatureData
@@ -45,6 +45,7 @@ class Transaction(BaseModel):
     amount : float
     status : Optional[TransactionStatus]
     badgeId :  Optional[str]
+    pubKey : str
 
     class Config:
         use_enum_values = True

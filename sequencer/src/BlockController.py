@@ -4,7 +4,7 @@ from src.Types import BadgeExecutionCause, TransactionBadge, TransactionStatus, 
 from src.AsyncMongoClient import get_mongo_client
 import logging
 from src.MerkleTreeController import MerkleTreeController
-from src.utils import generate_random_id
+from src.utils import generate_random_id, hex_to_bytes, bytes_to_hex, add_0x_prefix
 import os
 import hashlib
 import asyncio
@@ -21,15 +21,15 @@ logger = logging.getLogger(__name__)
 
 ZERO_ADDRESS = "0x" + "0" * 40
 
-class BadgeController:
+class BlockController:
 
-    def __init__(self, queue):
+    def __init__(self, queue, with_account_setup: bool):
         self.queue = queue
         self.transaction_counter = 0
         self.last_timestamp = get_current_timestamp()
         self.mempool = MemPool()
         self.mongo_client = get_mongo_client()
-        self.tree_controller = MerkleTreeController(with_account_setup=False)
+        self.tree_controller = MerkleTreeController(with_account_setup=with_account_setup)
     
 
     async def _get_transaction_for_badge(self, badge_execution_cause : BadgeExecutionCause) -> list[Transaction]:
@@ -50,7 +50,7 @@ class BadgeController:
                     if t.receiver is None:
                         await self.tree_controller.handle_deposit_transaction(badge_id=badge_id, transaction=t)
                     elif t.receiver == ZERO_ADDRESS:
-                        pass
+                        pass # here withdraw transaction should be processed
                     else:
                         await self.tree_controller.make_rollup_transaction_between_existing_users(badge_id=badge_id, transaction=t)
                 except Exception as e:
@@ -105,7 +105,7 @@ class BadgeController:
             l2_badge_new = TransactionBadge(
                 badgeId=badge_id,
                 status=BadgeStatus.SEND_TO_VERIFY,
-                blockhash=curr_block_hash,
+                blockhash=add_0x_prefix(curr_block_hash),
                 state_root=new_merkle_root,
                 blocknumber=blocknumber + 1,
                 timestamp=timestamp,
@@ -149,12 +149,11 @@ class BadgeController:
             logger.error(f"failed to retriece previous block information : {e}")
 
     async def create_block_hash(self, blocknumber: int, timestamp: int, transactions: list[Transaction], previous_block_hash: str) -> str:
-        logger.info(f"prev block hash : {previous_block_hash}")
         try: 
             rolling_tx_hash: bytes = await self.create_rolling_transaction_hash(transactions=transactions)
             blocknumber_bytes = blocknumber.to_bytes(8, 'little')
             timestamp_bytes = timestamp.to_bytes(8, 'little')
-            prev_block_hash_bytes = bytes.fromhex(previous_block_hash)
+            prev_block_hash_bytes = hex_to_bytes(previous_block_hash)
             data = blocknumber_bytes + timestamp_bytes + prev_block_hash_bytes + rolling_tx_hash
             return hashlib.sha256(data).hexdigest()
         except Exception as e:
@@ -182,8 +181,8 @@ class BadgeController:
 
 
     def create_transaction_hash(self, t: Transaction) -> bytes:
-        sender_bytes = bytes.fromhex(t.sender)
-        receiver_bytes = bytes.fromhex(t.receiver)
+        sender_bytes = hex_to_bytes(t.sender)
+        receiver_bytes = hex_to_bytes(t.receiver)
         nonce_bytes = t.nonce.to_bytes(8, 'little')
         amount_bytes = int(t.amount).to_bytes(8, 'little')
         received_bytes = t.receivedAt.to_bytes(8, 'little')
@@ -201,7 +200,8 @@ class BadgeController:
             signature=transaction_request.signature.signature,
             amount=transaction_request.amount,
             status=TransactionStatus.PENDING,
-            badgeId = None
+            badgeId = None,
+            pubKey = transaction_request.signature.pubKey
         )
 
     async def handel_transaction_submission(self, transaction_request : TransactionRequest) -> SubmissionResponse:

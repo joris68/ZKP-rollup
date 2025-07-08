@@ -7,11 +7,16 @@ import numpy as np
 import hashlib
 from nacl.signing import SigningKey
 import time
+import json
+from eth_account import Account
+from eth_account._utils.legacy_transactions import serializable_unsigned_transaction_from_dict
+from eth_utils import keccak, to_bytes, to_hex
+from eth_keys import keys
 
 logger = logging.getLogger(__name__)
 
 logging.basicConfig(
-    level=logging.INFO,  # or logging.DEBUG for more detail
+    level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[logging.StreamHandler()]
 )
@@ -23,6 +28,14 @@ SEQUENCER_URL = "http://127.0.0.1:8000"
 NODE_URL = "http://127.0.0.1:8545"
 CONTRACT_ADDRESS = "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512"
 
+
+def hex_to_bytes(hex_str: str) -> bytes:
+    if hex_str.startswith("0x"):
+        hex_str = hex_str[2:]
+    return bytes.fromhex(hex_str)
+
+def bytes_to_hex(data: bytes) -> str:
+    return "0x" + data.hex()
 
 def load_contract_abi() -> dict:
     with open("Rollup.json", "r") as f:
@@ -59,8 +72,6 @@ def make_deposit_call(address : str, private_key : str, contract, web3):
     logger.info("Transaction receipt:", receipt)
     time.sleep(1)
     
-
-
 def add_users_to_the_rollup():
     web3 = Web3(Web3.HTTPProvider(NODE_URL))
     contract_address = web3.to_checksum_address(CONTRACT_ADDRESS)
@@ -78,32 +89,33 @@ def choose_random_transaction_pair(accounts: list[dict]) -> list[int]:
 
 
 def transaction_body_to_bytes(trans_body : dict) -> bytes:
-        sender_bytes = bytes.fromhex(trans_body["sender"])
-        receiver_bytes = bytes.fromhex(trans_body["receiver"])
+        sender_bytes = hex_to_bytes(trans_body["sender"])
+        receiver_bytes = hex_to_bytes(trans_body["receiver"])
         nonce_bytes = trans_body["nonce"].to_bytes(8, 'little') 
         amount_bytes = trans_body["amount"].to_bytes(8, 'little')
         msg = sender_bytes + receiver_bytes + nonce_bytes + amount_bytes
         return hashlib.sha256(msg).digest()
-       
+
 
 def create_transaction(sender : dict , receiver: dict, sender_idx : int, nonce: int) -> dict:
         
         trans_body = {
             "sender" : sender["pub_key"],
             "receiver" : receiver["pub_key"],
-            "amount" : AMOUNT,
+            "amount" : str(AMOUNT),
             "nonce": nonce,
         }
-        sk = SigningKey(bytes.fromhex(sender['priv_key']))
-        msg = transaction_body_to_bytes(trans_body=trans_body)
-        sig = sk.sign(msg).signature
-        return {
-            **trans_body ,
-            "signature" :{
-                "pubKey":   trans_body["sender"] ,
-                "signature" : sig.hex()
-            }
+        private_key = keys.PrivateKey(hex_to_bytes(sender["priv_key"]))
+        public_key = private_key.public_key
+        message = json.dumps(trans_body, separators=(",", ":"), sort_keys=True)
+        message_hash = keccak(text=message)
+        signature = private_key.sign_msg_hash(message_hash)
+
+        trans_body["signature"] ={
+           "pubKey": to_hex(public_key.to_bytes()),
+            "signature": to_hex(signature.to_bytes())
         }
+        return trans_body
 
 def create_transaction_to_submit(nonce : int, a : int , b : int):
         sender = LAYER_2_ACCOUNTS[a]
@@ -113,8 +125,8 @@ def create_transaction_to_submit(nonce : int, a : int , b : int):
 class StefanJorisRollUpUser(HttpUser):
     host = SEQUENCER_URL
     wait_time = between(1, 1.5)
-    def on_start(self):
-        add_users_to_the_rollup()
+    # def on_start(self):
+    #     add_users_to_the_rollup()
 
     @task
     def submit_transaction(self):
