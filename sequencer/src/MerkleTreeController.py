@@ -6,6 +6,7 @@ from smt.tree import SparseMerkleTree
 from  src.AsyncMongoClient import get_mongo_client
 import os
 import logging
+from src.utils import hex_to_bytes, bytes_to_hex
 
 logger = logging.getLogger(__name__)
 
@@ -30,11 +31,21 @@ class MerkleTreeController:
             raise Exception("Tree invariants failed")
         try:
             new_sender_leaf_data = await self.update_sender_leaf_return_bytes(badge_id=badge_id, transaction=transaction)
-            self.sparse_merkle_tree.update(bytes.fromhex(transaction.sender), new_sender_leaf_data)
+            self.sparse_merkle_tree.update(hex_to_bytes(transaction.sender), new_sender_leaf_data)
             new_receiver_leaf = await self.update_receiver_bytes_return_bytes(badge_id=badge_id, transaction=transaction)
-            self.sparse_merkle_tree.update(bytes.fromhex(transaction.receiver), new_receiver_leaf)
+            self.sparse_merkle_tree.update(hex_to_bytes(transaction.receiver), new_receiver_leaf)
         except Exception as e:
             logger.error(f"Error when updating leaf data : {e}")
+            raise e
+    
+    async def handle_deposit_transaction(self, badge_id : str, transaction : Transaction) -> None:
+        try:
+            new_leaf_data= await self.leaf_to_bytes(balance=transaction.amount, nonce=0, account=transaction.sender)
+            logger.info(new_leaf_data)
+            logger.info(type(new_leaf_data))
+            self.sparse_merkle_tree.update(hex_to_bytes(transaction.sender), new_leaf_data)
+        except Exception as e :
+            logger.error(f"Error when inserting deposit into the tree: {e}")
             raise e
 
 
@@ -191,16 +202,14 @@ class MerkleTreeController:
                     logger.error(f"error in updating the chnagelog for transaction : {transaction.transactionId}")
                     raise e
 
-    # TODO sure if that is correct? with hashing the key, because it gets hashed again?
     async def leaf_to_bytes(self, balance : int, nonce : int , account : str ) -> bytes:
 
         nonce_bytes = int(nonce).to_bytes(8, 'little') 
         balance_bytes = int(balance).to_bytes(8, 'little')
-        hashes_pub = hashlib.sha256(bytes.fromhex(account)).digest()
+        hashes_pub = hex_to_bytes(account)
         msg = balance_bytes + nonce_bytes + hashes_pub
         return msg
         
-
     
     async def _check_tree_invariants_for_update(self, transaction : Transaction) -> bool:
          async with await self.mongo_client.start_session(causal_consistency=True) as session:
@@ -227,33 +236,28 @@ class MerkleTreeController:
 
     def initilize_sparse_merkle_tree(self) -> SparseMerkleTree:
         logger.info("starting to initialize sparse merkle tree")
-        with open("initial_state.json", "r") as file:
+        with open("funded_accounts.json", "r") as file:
             users_data = json.load(file)
         
         tree = SparseMerkleTree()
 
-        for acc in users_data["accounts"]:
-            key = hashlib.sha256(bytes.fromhex(acc["pub_key"])).digest()
+        for acc in users_data:
+            key = hex_to_bytes(acc["pub_key"])
             value = self.hash_account_to_leaf_value(account_data= acc)
             tree.update(key = key, value = value)
         
         logger.info("done inserting leaf values")
-        logger.info(tree.root_as_hex())
         return tree
     
-    """
-        The libary hashes the leaf data internally
-        TODO : sure I need to hash the pubkey here?
-    """
     def hash_account_to_leaf_value(self, account_data) -> bytes:
         balance = account_data["balance"]
-        nonce = account_data["nonce"]
+        nonce = 0
         pub_key = account_data["pub_key"]
 
         nonce_bytes = int(nonce).to_bytes(8, 'little') 
         balance_bytes = int(balance).to_bytes(8, 'little')
 
-        hashes_pub = hashlib.sha256(bytes.fromhex(pub_key)).digest()
+        hashes_pub = hex_to_bytes(pub_key)
         msg = balance_bytes + nonce_bytes + hashes_pub
         return msg
         
