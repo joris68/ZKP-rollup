@@ -7,7 +7,7 @@ import hashlib
 import struct
 from src.utils import create_message_from_transaction_body, hex_to_bytes
 import json
-from eth_utils import keccak
+from eth_utils import keccak, to_bytes
 from eth_keys import keys
 
 logger = logging.getLogger(__name__)
@@ -25,14 +25,13 @@ class Transaction_Validator(object):
             }
             message_json = json.dumps(tx_body, separators=(",", ":"), sort_keys=True)
             message_hash = keccak(text=message_json)
-            signature_bytes = hex_to_bytes(transaction.signature)
-            pubkey_bytes = hex_to_bytes(transaction.pubKey)
+            signature_bytes = to_bytes(transaction.signature)
+            pubkey_bytes = to_bytes(transaction.pubKey)
             signature = keys.Signature(signature_bytes)
             public_key = keys.PublicKey(pubkey_bytes)
             return public_key.verify_msg_hash(message_hash, signature)
 
         except Exception as e:
-            logger.info("jksbkbökajbdökbsödkcköasbdökcbabsöjdkbcökjabsödkböv")
             logger.info(e)
             return False
 
