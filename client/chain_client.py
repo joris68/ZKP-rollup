@@ -108,12 +108,12 @@ def create_transaction(sender : dict , receiver: dict, sender_idx : int, nonce: 
         private_key = keys.PrivateKey(hex_to_bytes(sender["priv_key"]))
         public_key = private_key.public_key
         message = json.dumps(trans_body, separators=(",", ":"), sort_keys=True)
-        message_hash = keccak(text=message)
-        signature = private_key.sign_msg_hash(message_hash)
+        message_bytes = message.encode("utf-8")
+        signature = private_key.sign_msg(message_bytes)
 
         trans_body["signature"] ={
-           "pubKey": to_hex(public_key.to_bytes()),
-            "signature": to_hex(signature.to_bytes())
+           "pubKey": public_key.to_hex(),
+            "signature": signature.to_hex()
         }
         return trans_body
 
@@ -125,8 +125,8 @@ def create_transaction_to_submit(nonce : int, a : int , b : int):
 class StefanJorisRollUpUser(HttpUser):
     host = SEQUENCER_URL
     wait_time = between(1, 1.5)
-    # def on_start(self):
-    #     add_users_to_the_rollup()
+    #def on_start(self):
+     #    add_users_to_the_rollup()
 
     @task
     def submit_transaction(self):

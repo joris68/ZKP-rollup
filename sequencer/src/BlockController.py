@@ -153,7 +153,11 @@ class BlockController:
             rolling_tx_hash: bytes = await self.create_rolling_transaction_hash(transactions=transactions)
             blocknumber_bytes = blocknumber.to_bytes(8, 'little')
             timestamp_bytes = timestamp.to_bytes(8, 'little')
-            prev_block_hash_bytes = hex_to_bytes(previous_block_hash)
+            prev_block_hash_bytes = None
+            if previous_block_hash is None:
+                prev_block_hash_bytes = bytes.fromhex("0")
+            else:
+                prev_block_hash_bytes = hex_to_bytes(previous_block_hash)
             data = blocknumber_bytes + timestamp_bytes + prev_block_hash_bytes + rolling_tx_hash
             return hashlib.sha256(data).hexdigest()
         except Exception as e:
@@ -182,7 +186,10 @@ class BlockController:
 
     def create_transaction_hash(self, t: Transaction) -> bytes:
         sender_bytes = hex_to_bytes(t.sender)
-        receiver_bytes = hex_to_bytes(t.receiver)
+        if t.receiver is not None:
+            receiver_bytes = hex_to_bytes(t.receiver)
+        else:
+            receiver_bytes = b"0"
         nonce_bytes = t.nonce.to_bytes(8, 'little')
         amount_bytes = int(t.amount).to_bytes(8, 'little')
         received_bytes = t.receivedAt.to_bytes(8, 'little')
