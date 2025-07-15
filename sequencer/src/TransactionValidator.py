@@ -20,8 +20,8 @@ class Transaction_Validator(object):
                 "nonce": transaction.nonce
             }
             message_json = json.dumps(tx_body, separators=(",", ":"), sort_keys=True)
-            signature_bytes = transaction.signature
-            pubkey_bytes = transaction.pubKey
+            signature_bytes = hex_to_bytes(transaction.signature)
+            pubkey_bytes = hex_to_bytes(transaction.pubKey)
             signature = keys.Signature(signature_bytes)
             public_key = keys.PublicKey(pubkey_bytes)
             message_bytes = message_json.encode("utf-8")

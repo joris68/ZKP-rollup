@@ -69,8 +69,8 @@ class MerkleTreeController:
                             update_index = acc
 
                     if update_index is not None:
-                        new_balance = prev_sender.account_updates[update_index] - transaction.amount # + transaction.fee)
-                        new_nonce = prev_sender.account_updates[update_index]["nonce_after"] + 1
+                        new_balance = prev_sender.account_updates[update_index] - transaction.amount
+                        new_nonce = prev_sender.account_updates[update_index]["nonce_before"] + 1
                         await users_col.update_one(
                                 {
                                     "address": transaction.sender,
@@ -96,7 +96,7 @@ class MerkleTreeController:
                                 balance_before = prev_sender["balance"]
                                 nonce_before = prev_sender["nonce"]
                             else :
-                                last_sub = prev_sender["account_updates"][len(account_updates) -1]
+                                last_sub = prev_sender["account_updates"][len(account_updates) -2]
                                 balance_before = last_sub["balance_after"]
                                 nonce_before = last_sub["nonce_after"]
                             
@@ -222,7 +222,15 @@ class MerkleTreeController:
                         return False
                     account_object = AccountsCollection(**account)
                     balance_sufficient = account_object.balance >= transaction.amount #+ fee
-                    nonce_correct = account_object.nonce == transaction.nonce
+                    if len(account_object.account_updates) > 0:
+                        latest_nonce = account_object.account_updates[-1].nonce_after
+                        latest_balance = account_object.account_updates[-1].balance_after
+                    else:
+                        latest_nonce = account_object.nonce
+                        latest_balance = account_object.balance
+
+                    balance_sufficient = latest_balance >= transaction.amount
+                    nonce_correct = latest_nonce == transaction.nonce
                     account_receiver  = await users_col.find_one({"address" : transaction.receiver}, session=session)
 
                     endresult = (balance_sufficient and  nonce_correct and (account_receiver is not None))

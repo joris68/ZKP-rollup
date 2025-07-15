@@ -115,6 +115,7 @@ def create_transaction(sender : dict , receiver: dict, sender_idx : int, nonce: 
            "pubKey": public_key.to_hex(),
             "signature": signature.to_hex()
         }
+        logger.info(trans_body)
         return trans_body
 
 def create_transaction_to_submit(nonce : int, a : int , b : int):

@@ -4,7 +4,7 @@
 
     - python 3.12
     - anvil, foundry toolchain
-    - include the gitmodules inside the solidity folder (see readme in the )
+    - include the gitmodules inside the solidity folder (see readme in the root directory)
 
 # How to run
 

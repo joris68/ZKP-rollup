@@ -1,6 +1,6 @@
 from src.utils import get_current_timestamp
 from src.MemPool import MemPool
-from src.Types import BadgeExecutionCause, TransactionBadge, TransactionStatus, BadgeStatus, Transaction, TransactionRequest, SubmissionResponse, SubmissionStatus, NonceResponse
+from src.Types import BadgeExecutionCause, TransactionBadge, TransactionStatus, BadgeStatus, Transaction, TransactionRequest, SubmissionResponse, SubmissionStatus, NonceResponse, AccountsCollection
 from src.AsyncMongoClient import get_mongo_client
 import logging
 from src.MerkleTreeController import MerkleTreeController
@@ -237,8 +237,13 @@ class BlockController:
         try:
             db = self.mongo_client[os.environ["DB_NAME"]]
             curr_col = db[os.environ["USERS"]]
-            doc = await curr_col.find_one({"address" : account})
-            return NonceResponse( nonce = doc["nonce"])
+            account = await curr_col.find_one({"address" : account})
+            acc = AccountsCollection(**account)
+            if len(acc.account_updates) > 0:
+                latest_nonce = acc.account_updates[-1].nonce_after
+            else:
+                    latest_nonce = acc.nonce
+            return NonceResponse( nonce = latest_nonce)
         except Exception as e:
             logger.error(f"Error when queriing for nonce: {e}")
             raise e

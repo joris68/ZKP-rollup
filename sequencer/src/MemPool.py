@@ -25,9 +25,9 @@ class MemPool:
 
     async def insert_into_queue(self, transaction : Transaction, submisson_id) -> SubmissionResponse:
         
-        #transaction_valid = await self.validator.check_transaction_validity(transaction= transaction, submission_id=submisson_id)
-        #logger.info(transaction_valid)
-        transaction_valid = True
+        transaction_valid = await self.validator.check_transaction_validity(transaction= transaction, submission_id=submisson_id)
+        logger.info(transaction_valid)
+        #transaction_valid = True
 
         async with await self.mongo_client.start_session(causal_consistency=True) as session:
                 try:
