@@ -45,7 +45,7 @@ class Transaction(BaseModel):
     amount : float
     status : Optional[TransactionStatus]
     badgeId :  Optional[str]
-    pubKey : str
+    pubKey : Optional[str]
 
     class Config:
         use_enum_values = True

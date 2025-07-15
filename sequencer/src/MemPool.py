@@ -27,6 +27,7 @@ class MemPool:
         
         transaction_valid = await self.validator.check_transaction_validity(transaction= transaction, submission_id=submisson_id)
         logger.info(transaction_valid)
+        #transaction_valid = True
 
         async with await self.mongo_client.start_session(causal_consistency=True) as session:
                 try:
@@ -59,7 +60,8 @@ class MemPool:
                     nonce=None,
                     signature=None,
                     status=TransactionStatus.PENDING.value,
-                    badgeId=None
+                    badgeId=None,
+                    pubKey = None
                 )
                 db = self.mongo_client[os.environ["DB_NAME"]]
                 trans_col = db[os.environ["TRANSACTIONS"]]
