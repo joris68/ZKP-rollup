@@ -1,0 +1,32 @@
+{
+  "old_merkle_root": "0x024e01e9756a9b49b3b89e19bf51ac13a3cff3940db08a5e1d916c69f6517f24",
+  "new_merkle_root": "0xc2c6f5ab17a58364e9862c897363a9dd01a8c00ba7627dbf9bd413708a82fcb6",
+  "leaf_data": [
+    {
+      "balance": 0,
+      "nonce": 0
+    },
+    {
+      "balance": 69000000000000008,
+      "nonce": 0
+    }
+  ],
+  "transactions": [
+    {
+      "from": "0x1bef405618231f1e6af15cde87f0018595f7e9e2",
+      "to": "0x9876543210987654321098765432109876543210",
+      "amount": 420000000000008,
+      "nonce": 0,
+      "signature": {
+        "pubKey": "0x1bef405618231f1e6af15cde87f0018595f7e9e2",
+        "signature": "0xe0791afc0f18295af7b7cae4a8ca2e67b3855e0fc4ce321d4933998af0f2db9c32403727f49f5b80c4685c217f0ae5b23630739c98c941d28e3e1419d19521ef1b"
+      }
+    }
+  ],
+  "deposits": [],
+  "badge_id": 2,
+  "addresses": [
+    "0x9876543210987654321098765432109876543210",
+    "0x1bef405618231f1e6af15cde87f0018595f7e9e2"
+  ]
+}

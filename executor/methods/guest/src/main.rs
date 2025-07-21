@@ -5,19 +5,15 @@ use risc0_zkvm::guest::env;
 use serde::{Deserialize, Serialize};
 use smt::{AccountData, new_smt, root, update, address_to_tree_key, h256_to_hex, hex_to_address};
 
-// Import alloc types
 use alloc::{
     string::String,
     vec::Vec,
     format,
 };
-
-// RISC Zero precompiles for cryptography
 use k256::ecdsa::{Signature, VerifyingKey, RecoveryId};
 use k256::elliptic_curve::sec1::ToEncodedPoint;
 use sha3::{Keccak256, Digest};
 
-// Same structs as in your batch generator
 #[derive(Serialize, Deserialize, Clone)]
 struct LeafData {
     balance: u64,
@@ -40,28 +36,24 @@ struct Transaction {
     signature: TransactionSignature,
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+struct DepositInfo {
+    deposit_id: u64,
+    user: String,      // Ethereum address
+    amount: u64,       // Amount in wei 
+}
+
 #[derive(Serialize, Deserialize)]
 struct Batch {
     old_merkle_root: String,
     new_merkle_root: String,
     leaf_data: Vec<LeafData>,
     transactions: Vec<Transaction>,
+    deposits: Vec<DepositInfo>, 
     badge_id: u32,
     addresses: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize)]
-struct BatchProof {
-    old_root_verified: bool,
-    new_root_verified: bool,
-    signatures_verified: bool,
-    old_root: String,
-    new_root: String,
-    badge_id: u32,
-    transactions_processed: usize,
-}
-
-// Helper function to convert hex string to bytes
 fn hex_to_bytes(hex_str: &str) -> Result<Vec<u8>, &'static str> {
     let clean = hex_str.strip_prefix("0x").unwrap_or(hex_str);
     
@@ -80,7 +72,6 @@ fn hex_to_bytes(hex_str: &str) -> Result<Vec<u8>, &'static str> {
     Ok(bytes)
 }
 
-// Helper function to encode bytes to hex string
 fn hex_encode(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{:02x}", b)).collect()
 }
@@ -151,11 +142,9 @@ fn recover_and_verify_signature(
         Err(_) => return false,
     };
     
-    // Compare with expected address (case insensitive)
     recovered_address.to_lowercase() == expected_address.to_lowercase()
 }
 
-// Convert a VerifyingKey to an Ethereum address
 fn public_key_to_ethereum_address(verifying_key: &VerifyingKey) -> Result<String, &'static str> {
     // Get the public key point in uncompressed format
     let public_key = verifying_key.as_affine();
@@ -199,9 +188,24 @@ fn hash_ethereum_message(message: &str) -> [u8; 32] {
     hasher.finalize().into()
 }
 
-// Find account index by address
 fn find_account_index(addresses: &[String], target_address: &str) -> Option<usize> {
-    addresses.iter().position(|addr| addr == target_address)
+    addresses.iter().position(|addr| addr.to_lowercase() == target_address.to_lowercase())
+}
+
+fn hex_to_bytes32_array(hex_str: &str) -> [u8; 32] {
+    let clean = hex_str.strip_prefix("0x").unwrap_or(hex_str);
+    let bytes = hex_to_bytes(hex_str).expect("Invalid hex string");
+    let mut result = [0u8; 32];
+    
+    if bytes.len() >= 32 {
+        result.copy_from_slice(&bytes[..32]);
+    } else {
+        // For shorter byte arrays like empty root, pad with zeros on the left
+        let start_idx = 32 - bytes.len();
+        result[start_idx..].copy_from_slice(&bytes);
+    }
+    
+    result
 }
 
 risc0_zkvm::guest::entry!(main);
@@ -230,31 +234,59 @@ fn main() {
     let computed_old_root = h256_to_hex(&root(&tree));
     let old_root_verified = computed_old_root == batch.old_merkle_root;
     
-    // Verify signatures for all transactions using recovery
+    // Verify signatures for all transactions
     let mut signatures_verified = true;
     
-    for tx in &batch.transactions {
-        // Verify MetaMask signature using recovery-based verification
-        if !verify_metamask_signature(tx) {
-            signatures_verified = false;
-            break;
+    if !batch.transactions.is_empty() {
+        for tx in &batch.transactions {
+            // Verify MetaMask signature using recovery-based verification
+            if !verify_metamask_signature(tx) {
+                signatures_verified = false;
+                break;
+            }
+            
+            // Additional check: ensure pubKey matches from address
+            if tx.signature.pub_key.to_lowercase() != tx.from.to_lowercase() {
+                signatures_verified = false;
+                break;
+            }
         }
+    }
+    // If no transactions, signatures are trivially verified (signatures_verified remains true)
+    
+    // Process deposits first
+    let mut deposits_processed = true;
+    let mut processed_deposit_ids = Vec::new();
+    let mut working_accounts = batch.leaf_data.clone();
+    
+    for deposit in &batch.deposits {
+        // Find the account index for this deposit
+        let account_idx = find_account_index(&batch.addresses, &deposit.user);
         
-        // Additional check: ensure pubKey matches from address
-        if tx.signature.pub_key.to_lowercase() != tx.from.to_lowercase() {
-            signatures_verified = false;
+        if let Some(idx) = account_idx {
+            // Add deposit amount to the account balance
+            working_accounts[idx].balance += deposit.amount;
+            
+            // Update the tree with the new balance
+            let account_data = AccountData {
+                balance: working_accounts[idx].balance,
+                nonce: working_accounts[idx].nonce,
+            };
+            update(&mut tree, account_keys[idx], account_data);
+            
+            // Track processed deposit ID
+            processed_deposit_ids.push(deposit.deposit_id);
+        } else {
+            // Account not found for deposit
+            deposits_processed = false;
             break;
         }
     }
     
-    // Apply transactions only if signatures are valid
-    let mut computed_new_root = computed_old_root.clone();
+    // Apply transactions only if signatures are valid and deposits processed
     let mut transactions_processed = 0;
     
-    if signatures_verified {
-        // Create a working copy of account data
-        let mut working_accounts = batch.leaf_data.clone();
-        
+    if signatures_verified && deposits_processed {
         for tx in &batch.transactions {
             // Find sender and receiver indices
             let from_idx = find_account_index(&batch.addresses, &tx.from);
@@ -276,7 +308,7 @@ fn main() {
                         update(&mut tree, account_keys[from_idx], account_data);
                         transactions_processed += 1;
                     } else {
-                        signatures_verified = false;
+                        // Invalid transaction
                         break;
                     }
                 } else {
@@ -315,34 +347,41 @@ fn main() {
                         transactions_processed += 1;
                     } else {
                         // Invalid transaction - insufficient balance or wrong nonce
-                        signatures_verified = false;
                         break;
                     }
                 }
             } else {
                 // Account not found
-                signatures_verified = false;
                 break;
             }
         }
-        
-        // Compute new root after all transactions
-        computed_new_root = h256_to_hex(&root(&tree));
     }
     
-    // Verify new root
+    // Compute final root after all changes
+    let computed_new_root = h256_to_hex(&root(&tree));
+    
+    // Verify new root matches expected
     let new_root_verified = computed_new_root == batch.new_merkle_root;
     
-    let proof = BatchProof {
-        old_root_verified,
-        new_root_verified,
-        signatures_verified,
-        old_root: computed_old_root,
-        new_root: computed_new_root,
-        badge_id: batch.badge_id,
-        transactions_processed,
-    };
+    // Overall success flag
+    let success = old_root_verified && 
+                  new_root_verified && 
+                  signatures_verified && 
+                  deposits_processed &&
+                  transactions_processed == batch.transactions.len();
     
-    // Commit the proof result to the journal
-    env::commit(&proof);
+    // Convert hex strings to bytes32 for proper encoding
+    let old_root_bytes = hex_to_bytes32_array(&computed_old_root);
+    let new_root_bytes = hex_to_bytes32_array(&computed_new_root);
+    
+    let verification_data = (
+        success,                         
+        old_root_bytes,                   
+        new_root_bytes,                   
+        batch.badge_id,                   
+        transactions_processed as u32,    
+        processed_deposit_ids,            
+    );
+
+    env::commit(&verification_data);
 }

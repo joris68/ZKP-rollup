@@ -1,0 +1,22 @@
+{
+  "old_merkle_root": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "new_merkle_root": "0x3a6cc236564ac23c45115f20e29406b718fb873047015e20615469c91160073e",
+  "leaf_data": [
+    {
+      "balance": 0,
+      "nonce": 0
+    }
+  ],
+  "transactions": [],
+  "deposits": [
+    {
+      "deposit_id": 1,
+      "user": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+      "amount": 1000000000000000000
+    }
+  ],
+  "badge_id": 1,
+  "addresses": [
+    "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+  ]
+}

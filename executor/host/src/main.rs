@@ -3,13 +3,14 @@ use alloy::{
     providers::ProviderBuilder,
     signers::local::PrivateKeySigner,
 };
-use alloy_primitives::{Address, FixedBytes, U256};
+use alloy_primitives::{Address, FixedBytes};
 use anyhow::Result;
 use clap::Parser;
 use methods::GUEST_ELF;
 use risc0_ethereum_contracts::encode_seal;
 use risc0_zkvm::{default_prover, ExecutorEnv, ProverOpts, VerifierContext};
 use serde::{Deserialize, Serialize};
+use sha2::{Sha256, Digest};
 use std::{fs, path::PathBuf};
 use url::Url;
 
@@ -18,10 +19,9 @@ pub mod rollup_abi {
         #[sol(rpc, all_derives)]
         interface IRollup {
             function submitBatch(
-                bytes32 oldRoot,
-                bytes32 newRoot,
                 uint32 batchId,
                 bytes calldata txData,
+                bytes32 journalHash,
                 bytes calldata seal
             ) external;
         }
@@ -48,21 +48,20 @@ struct Args {
     batch_path: PathBuf,
 }
 
-// Input batch format (from your batch generator)
-#[derive(Deserialize, Serialize)]  // Added Serialize here
+#[derive(Deserialize, Serialize, Clone)]
 struct LeafData {
     balance: u64,
     nonce: u64,
 }
 
-#[derive(Deserialize, Serialize)]  // Added Serialize here
+#[derive(Deserialize, Serialize, Clone)]
 struct TransactionSignature {
     #[serde(rename = "pubKey")]
     pub_key: String,
     signature: String,
 }
 
-#[derive(Deserialize, Serialize)]  // Added Serialize here
+#[derive(Deserialize, Serialize, Clone)]
 struct Transaction {
     from: String,
     to: String,
@@ -71,41 +70,27 @@ struct Transaction {
     signature: TransactionSignature,
 }
 
-#[derive(Deserialize, Serialize)]  // Added Serialize here
+#[derive(Deserialize, Serialize, Clone)]
+struct DepositInfo {
+    deposit_id: u64,
+    user: String,     
+    amount: u64,     
+}
+
+#[derive(Deserialize, Serialize, Clone)]
 struct Batch {
     old_merkle_root: String,
     new_merkle_root: String,
     leaf_data: Vec<LeafData>,
     transactions: Vec<Transaction>,
+    deposits: Vec<DepositInfo>, 
     badge_id: u32,
     addresses: Vec<String>,
-}
-
-// Output from guest program
-#[derive(Serialize, Deserialize)]
-struct BatchProof {
-    old_root_verified: bool,
-    new_root_verified: bool,
-    signatures_verified: bool,
-    old_root: String,
-    new_root: String,
-    badge_id: u32,
-    transactions_processed: usize,
 }
 
 fn hex_to_bytes(hex_str: &str) -> Vec<u8> {
     let clean = hex_str.strip_prefix("0x").unwrap_or(hex_str);
     hex::decode(clean).expect("Invalid hex string")
-}
-
-fn hex_to_bytes32(hex_str: &str) -> [u8; 32] {
-    let bytes = hex_to_bytes(hex_str);
-    if bytes.len() != 32 {
-        panic!("Expected 32 bytes, got {}", bytes.len());
-    }
-    let mut result = [0u8; 32];
-    result.copy_from_slice(&bytes);
-    result
 }
 
 fn create_transaction_calldata(transactions: &[Transaction]) -> Vec<u8> {
@@ -123,10 +108,10 @@ fn create_transaction_calldata(transactions: &[Transaction]) -> Vec<u8> {
         let to_bytes = hex_to_bytes(&tx.to);
         calldata.extend_from_slice(&to_bytes[..20]);
         
-        // Amount (32 bytes - big endian)
+        // Amount (8 bytes - big endian u64)
         calldata.extend_from_slice(&tx.amount.to_be_bytes());
         
-        // Nonce (32 bytes - big endian)
+        // Nonce (8 bytes - big endian u64)
         calldata.extend_from_slice(&tx.nonce.to_be_bytes());
         
         // Signature (65 bytes)
@@ -146,100 +131,100 @@ async fn main() -> Result<()> {
     env_logger::init();
     let args = Args::parse();
 
-    println!("🔄 Loading batch from: {:?}", args.batch_path);
+    println!("Loading batch from: {:?}", args.batch_path);
     let batch_json = fs::read_to_string(&args.batch_path)?;
     let batch: Batch = serde_json::from_str(&batch_json)?;
 
-    println!("📊 Batch details:");
-    println!("  Badge ID: {}", batch.badge_id);
-    println!("  Transactions: {}", batch.transactions.len());
-    println!("  Addresses: {}", batch.addresses.len());
-    println!("  Old Root: {}", batch.old_merkle_root);
-    println!("  Expected New Root: {}", batch.new_merkle_root);
+    // Generate the proof in a blocking task to avoid Tokio runtime issues
+    let batch_clone = batch.clone();
+    let receipt = tokio::task::spawn_blocking(move || {
+        let env = ExecutorEnv::builder()
+            .write(&batch_clone)?
+            .build()?;
 
-    // Build the environment for the guest program
-    let env = ExecutorEnv::builder()
-        .write(&batch)?
-        .build()?;
+        default_prover()
+            .prove_with_ctx(
+                env,
+                &VerifierContext::default(),
+                GUEST_ELF,
+                &ProverOpts::groth16(),
+            )
+    }).await??;
 
-    println!("\n🔄 Generating ZK proof...");
-    
-    // Generate the proof
-    let receipt = default_prover()
-        .prove_with_ctx(
-            env,
-            &VerifierContext::default(),
-            GUEST_ELF,
-            &ProverOpts::groth16(),
-        )?
-        .receipt;
+    let receipt = receipt.receipt;
 
     // Extract the proof result from the journal
-    let proof_result: BatchProof = receipt.journal.decode()?;
+    // The guest commits a tuple: (bool, [u8; 32], [u8; 32], u32, u32, Vec<u64>)
+    let verification_data: (bool, [u8; 32], [u8; 32], u32, u32, Vec<u64>) = receipt.journal.decode()?;
     
-    println!("\n✅ ZK Proof generated!");
-    println!("📋 Proof verification results:");
-    println!("  Old root verified: {}", proof_result.old_root_verified);
-    println!("  New root verified: {}", proof_result.new_root_verified);
-    println!("  Signatures verified: {}", proof_result.signatures_verified);
-    println!("  Transactions processed: {}", proof_result.transactions_processed);
-    println!("  Computed old root: {}", proof_result.old_root);
-    println!("  Computed new root: {}", proof_result.new_root);
+    let (success, old_root_bytes, new_root_bytes, badge_id, transactions_processed, processed_deposit_ids) = verification_data;
+    
+    // Convert bytes back to hex strings for display
+    let computed_old_root = format!("0x{}", hex::encode(old_root_bytes));
+    let computed_new_root = format!("0x{}", hex::encode(new_root_bytes));
 
     // Validate the proof
-    if !proof_result.old_root_verified || !proof_result.new_root_verified || !proof_result.signatures_verified {
+    if !success {
         panic!("❌ Proof verification failed!");
     }
 
-    if proof_result.transactions_processed != batch.transactions.len() {
+    if transactions_processed != batch.transactions.len() as u32 {
         panic!("❌ Not all transactions were processed!");
+    }
+
+    if processed_deposit_ids.len() != batch.deposits.len() {
+        panic!("❌ Not all deposits were processed!");
+    }
+
+    if computed_old_root != batch.old_merkle_root {
+        panic!("❌ Computed old root doesn't match batch: expected {}, got {}", 
+               batch.old_merkle_root, computed_old_root);
+    }
+
+    if computed_new_root != batch.new_merkle_root {
+        panic!("❌ Computed new root doesn't match batch: expected {}, got {}", 
+               batch.new_merkle_root, computed_new_root);
     }
 
     // Encode the seal for on-chain verification
     let seal = encode_seal(&receipt)?;
     
-    // Create transaction calldata
+    // Compute the journal hash from the raw journal bytes
+    let journal_bytes = &receipt.journal.bytes;
+    let journal_hash = Sha256::digest(journal_bytes);
+    let journal_hash_bytes32: FixedBytes<32> = FixedBytes::from_slice(&journal_hash);
+    
     let tx_calldata = create_transaction_calldata(&batch.transactions);
     
-    println!("\n📦 Calldata created: {} bytes", tx_calldata.len());
-    
-    // Convert roots to bytes32 format
-    let old_root_bytes32: FixedBytes<32> = FixedBytes::from_slice(&hex_to_bytes32(&batch.old_merkle_root));
-    let new_root_bytes32: FixedBytes<32> = FixedBytes::from_slice(&hex_to_bytes32(&batch.new_merkle_root));
-
-    println!("\n🚀 Publishing to blockchain...");
-    println!("  Contract: {}", args.contract);
-    println!("  Chain ID: {}", args.chain_id);
-    println!("  RPC URL: {}", args.rpc_url);
-
     // Set up Ethereum connection
     let wallet = EthereumWallet::from(args.eth_wallet_private_key);
     let provider = ProviderBuilder::new()
         .wallet(wallet)
-        .connect_http(args.rpc_url);  // Fixed: changed from on_http to connect_http
+        .connect_http(args.rpc_url);
 
     let contract = IRollup::new(args.contract, provider);
 
-    // Submit the batch on-chain
+    // Submit the batch on-chain 
     let call = contract.submitBatch(
-        old_root_bytes32,
-        new_root_bytes32,
-        batch.badge_id,
-        tx_calldata.into(),
-        seal.into(),
+        badge_id,                  
+        tx_calldata.into(),        
+        journal_hash_bytes32,      
+        seal.into(),        
     );
 
     let pending_tx = call.send().await?;
     let receipt = pending_tx.get_receipt().await?;
 
     println!("\n✅ Batch published successfully!");
-    println!("📄 Transaction receipt:");
+    println!("Transaction receipt:");
     println!("  Hash: {:?}", receipt.transaction_hash);
     println!("  Block: {:?}", receipt.block_number);
     println!("  Gas used: {:?}", receipt.gas_used);
     
     if receipt.status() {
-        println!("🎉 Transaction succeeded!");
+        println!("✅ Transaction succeeded!");
+        println!("{} deposits settled", processed_deposit_ids.len());
+        println!("State transition settled: {} -> {}", computed_old_root, computed_new_root);
     } else {
         println!("❌ Transaction failed!");
     }
