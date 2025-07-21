@@ -8,6 +8,7 @@ import {IRiscZeroVerifier} from "risc0/IRiscZeroVerifier.sol";
 import {RiscZeroGroth16Verifier} from "risc0/groth16/RiscZeroGroth16Verifier.sol";
 import {ControlID} from "risc0/groth16/ControlID.sol";
 import {Rollup} from "../contracts/Rollup.sol";
+import {DepositManager} from "../contracts/Deposit.sol";
 
 contract RollupDeploy is Script, RiscZeroCheats {
 
@@ -66,9 +67,27 @@ contract RollupDeploy is Script, RiscZeroCheats {
             console2.log("Using IRiscZeroVerifier contract deployed at", address(verifier));
         }
 
-        // Deploy the Rollup contract.
-        Rollup rollup = new Rollup(verifier);
-        console2.log("Deployed tollup contract to", address(rollup));
+        // Deploy the DepositManager contract first (needs rollup address, so we'll use CREATE2 or deploy in two steps)
+        // For now, we'll deploy with a placeholder and update it later
+        DepositManager depositManager = new DepositManager(address(0));
+        console2.log("Deployed DepositManager contract to", address(depositManager));
+
+        // Deploy the Rollup contract with the DepositManager
+        Rollup rollup = new Rollup(verifier, depositManager);
+        console2.log("Deployed Rollup contract to", address(rollup));
+
+        // Update the DepositManager with the correct rollup address
+        depositManager.updateRollupContract(address(rollup));
+        console2.log("Updated DepositManager with Rollup address");
+
+        // Log both addresses for easy reference
+        console2.log("=== DEPLOYMENT SUMMARY ===");
+        console2.log("RiscZero Verifier:", address(verifier));
+        console2.log("DepositManager:   ", address(depositManager));
+        console2.log("Rollup:           ", address(rollup));
+        console2.log("=== USAGE ===");
+        console2.log("For deposits: Use DepositManager at", address(depositManager));
+        console2.log("For batches:  Use Rollup at", address(rollup));
 
         vm.stopBroadcast();
     }
