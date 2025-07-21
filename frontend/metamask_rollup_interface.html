@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MetaMask Transaction Signer (Recovery Version)</title>
+    <title>MetaMask Transaction Signer (Multi-Network)</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -21,7 +21,7 @@
         h1 { color: #333; text-align: center; }
         .form-group { margin: 15px 0; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        input, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
         button { 
             background: #ff6b35; 
             color: white; 
@@ -50,6 +50,33 @@
         .copy-btn { background: #28a745; }
         .copy-btn:hover { background: #218838; }
         .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .deposit-btn { background: #007bff; }
+        .deposit-btn:hover { background: #0056b3; }
+        .network-btn { background: #6f42c1; }
+        .network-btn:hover { background: #5a32a3; }
+        .section { 
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+            padding: 15px; 
+            margin: 20px 0;
+            background: #fafafa;
+        }
+        .section h2 { margin-top: 0; color: #444; }
+        .network-info {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .network-selector {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 2px solid #dee2e6;
+        }
     </style>
 </head>
 <body>
@@ -57,7 +84,20 @@
         <h1>zk-Rollup Transaction Signer</h1>
         
         <div class="status info">
-            Create a Tx for our fresh zk-Rollup using a standard browser wallet extension!
+            Create a Tx for our zk-Rollup using a standard browser wallet extension! Now supports both Anvil and Sepolia networks.
+        </div>
+        
+        <!-- Network Selection -->
+        <div class="network-selector">
+            <h3>🌐 Network Selection</h3>
+            <div class="form-group">
+                <label for="networkSelect">Choose Network:</label>
+                <select id="networkSelect" onchange="updateNetworkConfig()">
+                    <option value="anvil">Anvil (Local Development)</option>
+                    <option value="sepolia">Sepolia (Testnet)</option>
+                </select>
+            </div>
+            <div id="networkInfo" class="network-info"></div>
         </div>
         
         <div id="status" class="status warning">
@@ -68,30 +108,63 @@
             Connect Wallet
         </button>
 
-        <div class="form-group">
-            <label for="sender">From Address:</label>
-            <input type="text" id="sender" placeholder="Will auto-fill when connected" readonly>
-            <small style="color: #666;">This address will be used in both 'from' and 'pubKey' fields</small>
-        </div>
-        
-        <div class="form-group">
-            <label for="receiver">To Address:</label>
-            <input type="text" id="receiver" value="0x9876543210987654321098765432109876543210">
-        </div>
-        
-        <div class="form-group">
-            <label for="amount">Amount (wei):</label>
-            <input type="number" id="amount" value="1500000000000000000">
-        </div>
-        
-        <div class="form-group">
-            <label for="nonce">Nonce:</label>
-            <input type="number" id="nonce" value="4">
+        <button id="switchNetworkBtn" onclick="switchToSelectedNetwork()" style="display: none;" class="network-btn">
+            Switch to Selected Network
+        </button>
+
+        <!-- Deposit Section -->
+        <div class="section">
+            <h2>💰 Deposit to Contract</h2>
+            <div class="form-group">
+                <label for="contractAddress">DepositManager Contract Address:</label>
+                <input type="text" id="contractAddress" readonly>
+                <small style="color: #666;">Auto-updates based on selected network</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="depositAmount">Deposit Amount (ETH):</label>
+                <input type="number" id="depositAmount" value="0.01" step="0.001" min="0">
+                <small style="color: #666;">Recommended: 0.01 ETH for testing</small>
+            </div>
+
+            <button onclick="depositToContract()" disabled id="depositBtn" class="deposit-btn">
+                Deposit to Contract
+            </button>
+            
+            <div style="margin-top: 10px;">
+                <a id="etherscanLink" href="#" target="_blank" style="display: none;">View on Etherscan</a>
+            </div>
         </div>
 
-        <button onclick="signTransaction()" disabled id="signBtn">
-            Sign Transaction 
-        </button>
+        <!-- Transaction Signing Section -->
+        <div class="section">
+            <h2>✍️ Sign zk-Rollup Transaction</h2>
+            <div class="form-group">
+                <label for="sender">From Address:</label>
+                <input type="text" id="sender" placeholder="Will auto-fill when connected" readonly>
+                <small style="color: #666;">This address will be used in both 'from' and 'pubKey' fields</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="receiver">To Address:</label>
+                <input type="text" id="receiver" value="0x9876543210987654321098765432109876543210">
+            </div>
+            
+            <div class="form-group">
+                <label for="amount">Amount (wei):</label>
+                <input type="number" id="amount" value="1000000000000000000">
+                <small style="color: #666;">1000000000000000000 wei = 1 ETH</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="nonce">Nonce:</label>
+                <input type="number" id="nonce" value="1">
+            </div>
+
+            <button onclick="signTransaction()" disabled id="signBtn">
+                Sign Transaction 
+            </button>
+        </div>
 
         <div id="output" class="output"></div>
         <button onclick="copyToClipboard()" class="copy-btn" id="copyBtn" style="display: none;">
@@ -101,32 +174,290 @@
 
     <script>
         let userAccount = null;
+        let currentNetwork = 'anvil';
+        
+        // Network configurations
+        const networks = {
+            anvil: {
+                chainId: '0x7a69', // 31337
+                chainName: 'Anvil Local',
+                rpcUrls: ['http://127.0.0.1:8545'],
+                contractAddress: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512', // Your local contract
+                rollupAddress: '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0', // Update with your local rollup
+                nativeCurrency: {
+                    name: 'Ethereum',
+                    symbol: 'ETH',
+                    decimals: 18
+                },
+                explorerUrl: null
+            },
+            sepolia: {
+                chainId: '0xaa36a7', // 11155111
+                chainName: 'Sepolia Testnet',
+                rpcUrls: ['https://sepolia.infura.io/v3/'],
+                contractAddress: '0x4D7aF921672c1697B83CF4bc5853b1Ba07eDf0b4', // Your deployed DepositManager
+                rollupAddress: '0x06f75bc30730AD5D8670e2615853AD50aA9243Ab', // Your deployed Rollup
+                nativeCurrency: {
+                    name: 'Ethereum',
+                    symbol: 'SepoliaETH',
+                    decimals: 18
+                },
+                explorerUrl: 'https://sepolia.etherscan.io'
+            }
+        };
+        
+        function updateNetworkConfig() {
+            const selectedNetwork = document.getElementById('networkSelect').value;
+            currentNetwork = selectedNetwork;
+            const config = networks[selectedNetwork];
+            
+            // Update contract address
+            document.getElementById('contractAddress').value = config.contractAddress;
+            
+            // Update network info display
+            const networkInfo = document.getElementById('networkInfo');
+            networkInfo.innerHTML = `
+                <strong>Network:</strong> ${config.chainName}<br>
+                <strong>Chain ID:</strong> ${config.chainId} (${parseInt(config.chainId, 16)})<br>
+                <strong>DepositManager:</strong> ${config.contractAddress}<br>
+                <strong>Rollup:</strong> ${config.rollupAddress}<br>
+                <strong>Explorer:</strong> ${config.explorerUrl || 'Local network'}
+            `;
+            
+            // Update etherscan link
+            const etherscanLink = document.getElementById('etherscanLink');
+            if (config.explorerUrl) {
+                etherscanLink.href = `${config.explorerUrl}/address/${config.contractAddress}`;
+                etherscanLink.textContent = `View on ${config.chainName} Explorer`;
+                etherscanLink.style.display = 'inline';
+            } else {
+                etherscanLink.style.display = 'none';
+            }
+            
+            // If wallet is connected, check if we need to switch networks
+            if (userAccount) {
+                checkNetworkMatch();
+            }
+        }
+        
+        async function checkNetworkMatch() {
+            try {
+                const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+                const expectedChainId = networks[currentNetwork].chainId;
+                
+                if (currentChainId !== expectedChainId) {
+                    const networkName = networks[currentNetwork].chainName;
+                    updateStatus(`⚠️ Wrong network! Please switch to ${networkName}. Current: ${currentChainId}`, 'warning');
+                    document.getElementById('switchNetworkBtn').style.display = 'inline-block';
+                    return false;
+                } else {
+                    document.getElementById('switchNetworkBtn').style.display = 'none';
+                    return true;
+                }
+            } catch (error) {
+                console.error('Error checking network:', error);
+                return false;
+            }
+        }
+        
+        // Initialize with default network
+        updateNetworkConfig();
+        
+        // Listen for account changes
+        if (typeof window.ethereum !== 'undefined') {
+            window.ethereum.on('accountsChanged', (accounts) => {
+                if (accounts.length === 0) {
+                    // User disconnected
+                    userAccount = null;
+                    updateStatus('❌ Wallet disconnected', 'error');
+                    document.getElementById('connectBtn').textContent = 'Connect Wallet';
+                    document.getElementById('connectBtn').disabled = false;
+                    document.getElementById('signBtn').disabled = true;
+                    document.getElementById('depositBtn').disabled = true;
+                    document.getElementById('sender').value = '';
+                } else {
+                    // Account changed
+                    userAccount = accounts[0];
+                    updateStatus(`🔄 Account changed to: ${userAccount}`, 'warning');
+                    document.getElementById('sender').value = userAccount;
+                    checkNetworkMatch();
+                }
+            });
+            
+            window.ethereum.on('chainChanged', (chainId) => {
+                updateStatus(`🔄 Network changed to: ${chainId}`, 'warning');
+                checkNetworkMatch();
+            });
+        }
+
+        async function switchToSelectedNetwork() {
+            const config = networks[currentNetwork];
+            try {
+                // Try to switch to the network
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: config.chainId }],
+                });
+            } catch (switchError) {
+                // If network doesn't exist, add it
+                if (switchError.code === 4902) {
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [config]
+                        });
+                    } catch (addError) {
+                        updateStatus(`❌ Error adding network: ${addError.message}`, 'error');
+                        return;
+                    }
+                } else {
+                    updateStatus(`❌ Error switching network: ${switchError.message}`, 'error');
+                    return;
+                }
+            }
+            
+            // Reconnect after network switch
+            setTimeout(() => {
+                connectWallet();
+            }, 1000);
+        }
         
         async function connectWallet() {
             if (typeof window.ethereum !== 'undefined') {
                 try {
+                    // Request accounts
                     const accounts = await window.ethereum.request({
                         method: 'eth_requestAccounts'
                     });
                     userAccount = accounts[0];
                     
-                    updateStatus(`✅ Connected: ${userAccount}`, 'success');
-                    document.getElementById('connectBtn').textContent = '✅ Connected';
-                    document.getElementById('connectBtn').disabled = true;
-                    document.getElementById('signBtn').disabled = false;
+                    // Check current network
+                    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                    
+                    // Check balance
+                    const balance = await window.ethereum.request({
+                        method: 'eth_getBalance',
+                        params: [userAccount, 'latest']
+                    });
+                    
+                    const balanceInEth = (parseInt(balance, 16) / Math.pow(10, 18)).toFixed(4);
+                    
+                    // Update UI
                     document.getElementById('sender').value = userAccount;
+                    
+                    // Check if on correct network
+                    const isCorrectNetwork = await checkNetworkMatch();
+                    
+                    if (isCorrectNetwork) {
+                        const networkName = networks[currentNetwork].chainName;
+                        updateStatus(`✅ Connected: ${userAccount} | ${networkName} | Balance: ${balanceInEth} ETH`, 'success');
+                        document.getElementById('connectBtn').textContent = '✅ Connected';
+                        document.getElementById('connectBtn').disabled = true;
+                        document.getElementById('signBtn').disabled = false;
+                        document.getElementById('depositBtn').disabled = false;
+                    }
                     
                 } catch (error) {
                     updateStatus(`❌ Error connecting: ${error.message}`, 'error');
+                    console.error('Connection error:', error);
                 }
             } else {
                 updateStatus('❌ MetaMask not detected. Please install MetaMask extension.', 'error');
             }
         }
 
+        async function depositToContract() {
+            if (!userAccount) {
+                updateStatus('Please connect your wallet first', 'error');
+                return;
+            }
+            
+            const isCorrectNetwork = await checkNetworkMatch();
+            if (!isCorrectNetwork) {
+                updateStatus('Please switch to the correct network first', 'error');
+                return;
+            }
+
+            try {
+                const contractAddress = document.getElementById('contractAddress').value;
+                const depositAmount = document.getElementById('depositAmount').value;
+                
+                if (!depositAmount || parseFloat(depositAmount) <= 0) {
+                    updateStatus('❌ Please enter a valid deposit amount', 'error');
+                    return;
+                }
+                
+                // Convert ETH to wei using BigInt for precision
+                const amountInWei = BigInt(Math.floor(parseFloat(depositAmount) * Math.pow(10, 18)));
+                
+                // Check balance first
+                const balance = await window.ethereum.request({
+                    method: 'eth_getBalance',
+                    params: [userAccount, 'latest']
+                });
+                
+                const balanceInWei = BigInt(balance);
+                updateStatus(`💰 Current balance: ${(Number(balanceInWei) / Math.pow(10, 18)).toFixed(4)} ETH`, 'info');
+                
+                if (balanceInWei < amountInWei) {
+                    updateStatus(`❌ Insufficient balance! Need ${depositAmount} ETH, have ${(Number(balanceInWei) / Math.pow(10, 18)).toFixed(4)} ETH`, 'error');
+                    return;
+                }
+                
+                updateStatus('🔄 Please check MetaMask and approve the deposit transaction...', 'warning');
+
+                const transactionParameters = {
+                    to: contractAddress,
+                    from: userAccount,
+                    value: '0x' + amountInWei.toString(16),
+                    data: '0xd0e30db0' // deposit() function selector
+                };
+
+                const txHash = await window.ethereum.request({
+                    method: 'eth_sendTransaction',
+                    params: [transactionParameters],
+                });
+
+                const explorerUrl = networks[currentNetwork].explorerUrl;
+                const txLink = explorerUrl ? `${explorerUrl}/tx/${txHash}` : null;
+                
+                let statusMessage = `✅ Deposit transaction sent! Hash: ${txHash}`;
+                if (txLink) {
+                    statusMessage += ` | View on Explorer: ${txLink}`;
+                }
+                updateStatus(statusMessage, 'success');
+                
+                // Display transaction details
+                const result = {
+                    network: networks[currentNetwork].chainName,
+                    transactionHash: txHash,
+                    explorerLink: txLink,
+                    contractAddress: contractAddress,
+                    depositAmount: depositAmount + ' ETH',
+                    amountInWei: amountInWei.toString(),
+                    from: userAccount,
+                    timestamp: new Date().toISOString()
+                };
+
+                document.getElementById('output').style.display = 'block';
+                document.getElementById('output').textContent = JSON.stringify(result, null, 2);
+                document.getElementById('copyBtn').style.display = 'block';
+
+            } catch (error) {
+                updateStatus(`❌ Error sending deposit: ${error.message}`, 'error');
+                console.error('Full error:', error);
+            }
+        }
+
         async function signTransaction() {
             if (!userAccount) {
                 updateStatus('Please connect your wallet first', 'error');
+                return;
+            }
+            
+            const isCorrectNetwork = await checkNetworkMatch();
+            if (!isCorrectNetwork) {
+                updateStatus('Please switch to the correct network first', 'error');
                 return;
             }
 
@@ -151,19 +482,21 @@
                     params: [message, userAccount]
                 });
 
-                // Create the transaction format for RISC Zero verification (recovery version)
+                // Create the transaction format for RISC Zero verification
                 const transactionFormat = {
                     from: sender,
                     to: receiver,
                     amount: parseInt(amount),
                     nonce: nonce,
                     signature: {
-                        pubKey: sender, // Using address - recovery will verify this matches
+                        pubKey: sender,
                         signature: signature
                     }
                 };
 
                 const result = {
+                    network: networks[currentNetwork].chainName,
+                    rollupContract: networks[currentNetwork].rollupAddress,
                     // Ready-to-use transaction for your JSON batch
                     transaction: transactionFormat,
                     
