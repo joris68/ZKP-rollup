@@ -1,24 +1,20 @@
-## zk-Rollup
+# ZK-Rollup Implementation
 
+A zk-rollup system built for Ethereum
+## Overview
 
-git submodule add https://github.com/OpenZeppelin/openzeppelin-contracts \
-  solidity/lib/openzeppelin-contracts
+This project implements a simple transfer-only ZK-rollup that addresses blockchain scalability by trading decentralization for throughput improvements
 
-git submodule add https://github.com/foundry-rs/forge-std \
-  solidity/lib/forge-std
-
-git submodule add https://github.com/risc0/risc0-ethereum \
-  solidity/lib/risc0-ethereum
+## Architecture
 
 ```text
-zk-Rollup/
-├── anvil                           // Local Ethereum simulation and state management for testing  
-│   
-├── executor/                       // Rust-based executor: generates zk‐SNARK proofs and submits rollup state & tx‐batches on‐chain  
-│ 
-├── scripts                         // Test-data generation and utility scripts  
-│ 
-├── sequencer                       // Python-based off-chain data model & batching logic
-│   
-└── solidity                        // Solidity contracts & Foundry tests for rollup (deposits, proof verification, state updates)  
-  
+zk-rollup/
+├── anvil/                          # Local Ethereum simulation and testing environment
+├── executor/                       # Rust-based ZK-SNARK proof generation and on-chain submission
+├── frontend/                       # Frontend for creating TXs for the Rollup and deposit to the Sepolia Contract
+├── scripts/                        # Test data generation and utility scripts
+├── sequencer/                      # Python-based transaction sequencing and batching logic
+└── solidity/                       # Smart contracts and Foundry tests
+    ├── contracts/                  # Rollup and deposit manager contracts
+    ├── lib/                        # Dependencies (OpenZeppelin, Forge-std, RISC0)
+    └── test/                       # Contract test suites
