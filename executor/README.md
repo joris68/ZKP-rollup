@@ -2,7 +2,7 @@
 
 The executor generates ZK-SNARK proofs for transaction batches using RISC Zero. There are two pre-generated batches in the data directory containing real MetaMask signatures from the frontend.
 
-![Executor Process](frontend_example.png)
+![Executor Process](../frontend_example.png)
 
 ### Setup
 ```bash
