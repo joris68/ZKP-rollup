@@ -1,19 +1,23 @@
 ## Executor (RISC Zero Based)
 
-The executor generates ZK-SNARK proofs for transaction batches using RISC Zero. There are two pre-generated batches in the data directory containing real MetaMask signatures from the frontend.
+The executor generates ZK-SNARK proofs for transaction batches using RISC Zero. There are two pre-generated batches in the data directory containing real MetaMask signatures from the frontend. In the image you can see the example tx we included in the batch.
 
 ![Executor Process](../frontend_example.png)
 
 ### Setup
 ```bash
 export ETH_WALLET_PRIVATE_KEY=ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+```
+Build the binaries
+```bash
 RISC0_USE_DOCKER=1 cargo build --release
 ```
-Note: This only works on Linux x86. For other platforms, use Bonsai:
+Note: Risc0 SNARK proving only works on Linux x86. For other platforms, use Bonsai:
 ```bash
 export BONSAI_API_URL=""
 export BONSAI_API_KEY=""
 ```
+### Heead to solidty/ dir to run the contracts before
 ### Running Batches
 
 First batch:
