@@ -1,6 +1,6 @@
 # ZK-Rollup Implementation
 
-A zk-rollup system built for Ethereum
+A zk-rollup system built for Ethereum. 
 ## Overview
 
 This project implements a simple transfer-only ZK-rollup that addresses blockchain scalability by trading decentralization for throughput improvements
@@ -18,3 +18,5 @@ zk-rollup/
     ├── contracts/                  # Rollup and deposit manager contracts
     ├── lib/                        # Dependencies (OpenZeppelin, Forge-std, RISC0)
     └── test/                       # Contract test suites
+```
+![Architecture](architecture.png)
